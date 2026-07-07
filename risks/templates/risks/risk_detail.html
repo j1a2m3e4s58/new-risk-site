@@ -1,0 +1,49 @@
+{% extends "risks/management_base.html" %}
+{% block title %}{{ risk.reference_id }} | Bank Risk System{% endblock %}
+{% block module_name %}Risk Detail{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="eyebrow">Risk Record</div>
+    <div class="d-flex justify-content-between gap-3 flex-wrap">
+        <div>
+            <h1>{{ risk.reference_id }}</h1>
+            <p class="muted">{{ risk.description }}</p>
+        </div>
+        <div class="actions">
+            {% if can_review_risk %}<a class="btnx" href="{% url 'risk-edit' risk.id %}">Edit</a><a class="btnx" href="{% url 'risk-action-update' risk.id %}">Action Update</a>{% endif %}
+            {% if can_submit_risk %}<a class="btnx" href="{% url 'risk-incident-create' risk.id %}">Add Incident</a>{% endif %}
+            {% if can_approve_delete %}<a class="btnx btn-dangerx" href="{% url 'risk-delete' risk.id %}">Delete</a>{% endif %}
+        </div>
+    </div>
+</section>
+<section class="grid-2">
+    <article class="panel">
+        <div class="eyebrow">Assessment</div>
+        <div class="grid-3 mt-3">
+            <div class="stat"><span>Department</span><strong style="font-size:1rem;">{{ risk.area_name|default:"Unspecified" }}</strong></div>
+            <div class="stat"><span>Workflow</span><strong style="font-size:1rem;">{{ risk.workflow_status }}</strong></div>
+            <div class="stat"><span>Residual</span><strong style="font-size:1rem;">{{ risk.residual_rating }}</strong></div>
+        </div>
+        <p><strong>Root Cause:</strong><br>{{ risk.caused_by|default:"Not recorded" }}</p>
+        <p><strong>Consequences:</strong><br>{{ risk.consequences|default:"Not recorded" }}</p>
+        <p><strong>Controls:</strong><br>{{ risk.controls|default:"No controls recorded" }}</p>
+    </article>
+    <article class="panel">
+        <div class="eyebrow">Action Plan</div>
+        <p><strong>Status:</strong> {{ risk.action_status }} | <strong>Progress:</strong> {{ risk.action_progress }}%</p>
+        <p><strong>Due:</strong> {{ risk.action_due_date|default:"-" }} {% if risk.is_action_overdue %}<span class="badge-soft">Overdue {{ risk.days_overdue }} day(s)</span>{% endif %}</p>
+        <p><strong>Responsible:</strong> {{ risk.action_responsible_officer|default:"Not assigned" }}</p>
+        <p>{{ risk.mitigation_action|default:"No mitigation action recorded." }}</p>
+    </article>
+</section>
+<section class="grid-2">
+    <article class="panel">
+        <div class="eyebrow">Incidents</div>
+        {% for incident in incidents %}<p>{{ incident.incident_date }} - <strong>{{ incident.title }}</strong> ({{ incident.status }})</p>{% empty %}<p class="muted">No incidents linked.</p>{% endfor %}
+    </article>
+    <article class="panel">
+        <div class="eyebrow">Audit Trail</div>
+        {% for log in audit_logs %}<p>{{ log.created_at|date:"Y-m-d H:i" }} - {{ log.summary }}</p>{% empty %}<p class="muted">No audit log yet.</p>{% endfor %}
+    </article>
+</section>
+{% endblock %}

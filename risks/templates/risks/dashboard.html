@@ -1,0 +1,1345 @@
+﻿{% load risk_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise Risk Monitor | v2.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --page: #03070b;
+            --panel: rgba(19, 24, 35, 0.58);
+            --panel-2: rgba(25, 31, 44, 0.46);
+            --line: rgba(188, 207, 238, 0.17);
+            --line-strong: rgba(188, 207, 238, 0.28);
+            --text: #edf4ff;
+            --muted: #92a0b4;
+            --blue: #4f8cff;
+            --green: #18a66a;
+            --danger: #ef4056;
+            --gold: #f5b72e;
+            --glass-shadow: 0 24px 70px rgba(0,0,0,0.34);
+        }
+
+        html { min-height: 100%; }
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 12% 8%, rgba(79,140,255,0.14), transparent 30%),
+                radial-gradient(circle at 78% 18%, rgba(24,166,106,0.10), transparent 28%),
+                linear-gradient(180deg, #03070b 0%, #050a0f 48%, #030608 100%);
+            background-attachment: fixed;
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .official-nav {
+            margin: 12px 16px;
+            padding: 10px 14px;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(19, 23, 34, 0.72), rgba(11, 15, 22, 0.56));
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(130%);
+            -webkit-backdrop-filter: blur(18px) saturate(130%);
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,255,255,0.45);
+        }
+
+        .brand-title { font-weight: 800; line-height: 1.1; font-size: 0.98rem; }
+        .brand-subtitle { color: var(--muted); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+        .nav-menu { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; justify-content: center; min-width: 0; }
+        .nav-menu a {
+            color: #dbe6f7;
+            text-decoration: none;
+            padding: 8px 11px;
+            border-radius: 0;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .nav-menu a.active,
+        .nav-menu a:hover {
+            color: #fff;
+            background: rgba(79,140,255,0.24);
+            border-color: rgba(79,140,255,0.42);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .user-chip {
+            border: 1px solid var(--line);
+            background: rgba(9, 14, 22, 0.48);
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #4f8cff, #18a66a);
+            color: white;
+            font-weight: 800;
+        }
+
+        .btn-nav { border: 1px solid var(--line); color: white; margin-left: 4px; font-size: 0.82rem; border-radius: 0; padding: 6px 10px; }
+        .btn-nav:hover { background: rgba(79,140,255,0.18); color: white; }
+
+        .workspace { padding: 10px 24px 28px; }
+        .alert { border-radius: 0; border-width: 1px; }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.85fr);
+            gap: 24px;
+            margin-bottom: 22px;
+        }
+
+        .hero-panel,
+        .side-panel,
+        .card {
+            border: 1px solid var(--line-strong);
+            border-radius: 0;
+            background:
+                linear-gradient(135deg, rgba(34, 41, 58, 0.58), rgba(10, 15, 22, 0.42)),
+                rgba(12, 17, 25, 0.34);
+            color: var(--text);
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(128%);
+            -webkit-backdrop-filter: blur(18px) saturate(128%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-panel::before,
+        .side-panel::before,
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(255,255,255,0.075), transparent 36%);
+            opacity: 0.72;
+        }
+        .hero-panel > *,
+        .side-panel > *,
+        .card > * { position: relative; z-index: 1; }
+
+        .hero-panel { padding: 30px; min-height: 260px; display: flex; flex-direction: column; justify-content: space-between; }
+        .eyebrow { color: var(--blue); font-size: 0.76rem; letter-spacing: 0.42em; font-weight: 800; text-transform: uppercase; }
+        .hero-title { font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 900; letter-spacing: 0; margin: 12px 0 8px; }
+        .hero-copy { color: var(--muted); font-size: 1rem; max-width: 760px; }
+
+        .metric-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+        .metric-pill {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            padding: 9px 12px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.055);
+            color: var(--text);
+            font-weight: 800;
+            font-size: 0.86rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .metric-pill.danger { border-color: rgba(239,64,86,0.55); color: #ff8b99; }
+        .metric-pill.warning { border-color: rgba(245,183,46,0.55); color: #ffd36a; }
+        .metric-pill.info { border-color: rgba(79,140,255,0.55); color: #91b8ff; }
+
+        .control-bar {
+            margin-top: 18px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-bar label { color: #dbe6f7; }
+        select,
+        .form-control,
+        .form-select {
+            background-color: rgba(7, 12, 19, 0.54) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--line) !important;
+            border-radius: 0 !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+        }
+        select option { background: #0c111a; color: var(--text); }
+
+        .filter-tabs { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
+        .filter-tabs .btn { border-radius: 0; color: #dbe6f7; border-color: var(--line); background: rgba(255,255,255,0.045); }
+        .filter-tabs .btn:hover { background: rgba(79,140,255,0.22); color: #fff; border-color: rgba(79,140,255,0.45); }
+
+        .quick-title { color: #dbe6f7; font-weight: 900; font-style: italic; margin-bottom: 3px; }
+        .quick-subtitle { color: var(--muted); font-size: 0.88rem; margin-bottom: 16px; }
+        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .quick-tile {
+            min-height: 78px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 7px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .quick-tile:hover { color: #fff; border-color: var(--blue); background: rgba(79,140,255,0.18); transform: translateY(-1px); }
+        .quick-tile i { color: var(--blue); font-size: 1.35rem; }
+
+        .danger-tools {
+            border-top: 1px solid var(--line);
+            margin-top: 18px;
+            padding-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .advanced-filter {
+            border: 1px solid var(--line);
+            background: rgba(4, 9, 15, 0.26);
+            padding: 12px;
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            align-items: end;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .advanced-filter > * { min-width: 0; }
+        .advanced-filter .filter-search { grid-column: span 2; }
+        .advanced-filter .btn { white-space: nowrap; }
+        .notice-card {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .notice-card.danger { border-left: 4px solid var(--danger); }
+        .notice-card.warning { border-left: 4px solid var(--gold); }
+        .notice-card.info { border-left: 4px solid var(--blue); }
+        .assurance-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .assurance-card {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            padding: 12px;
+            min-height: 84px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .assurance-card .assurance-label {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .assurance-card .assurance-value {
+            color: var(--text);
+            font-size: 1.12rem;
+            font-weight: 950;
+            line-height: 1.1;
+            word-break: break-word;
+        }
+        .assurance-card.good { border-left: 3px solid var(--green); }
+        .assurance-card.warn { border-left: 3px solid var(--gold); }
+        .assurance-card.bad { border-left: 3px solid var(--danger); }
+        .maintenance-tools summary {
+            cursor: pointer;
+            list-style: none;
+            font-weight: 900;
+            color: #dbe6f7;
+        }
+        .maintenance-tools summary::-webkit-details-marker { display: none; }
+        .chart-row { display: grid; grid-template-columns: 135px 1fr 44px; gap: 10px; align-items: center; margin: 10px 0; }
+        .chart-track { height: 10px; background: rgba(3,7,12,0.66); border: 1px solid var(--line); overflow: hidden; }
+        .chart-fill { height: 100%; background: linear-gradient(90deg, var(--blue), #18a66a); }
+        .row-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+
+        .btn { border-radius: 0; font-weight: 800; }
+        .btn-primary { background: var(--blue); border-color: var(--blue); }
+        .btn-success { background: var(--green); border-color: var(--green); }
+        .btn-danger { background: var(--danger); border-color: var(--danger); }
+        .btn-warning { background: var(--gold); border-color: var(--gold); color: #111 !important; }
+        .btn-info { background: #21b7d7; border-color: #21b7d7; color: #061017 !important; }
+
+        .card { margin-bottom: 22px; }
+        .card-header {
+            background: rgba(255,255,255,0.045);
+            border-bottom: 1px solid var(--line);
+            color: var(--text);
+            font-weight: 900;
+            padding: 16px;
+        }
+        .card-body { color: var(--text); }
+        .text-muted { color: var(--muted) !important; }
+
+        .matrix-container { display: flex; align-items: center; justify-content: center; }
+        .matrix-table { border-collapse: separate; border-spacing: 4px; width: 100%; }
+        .y-axis-label { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-weight: bold; color: var(--muted); margin-right: 5px; font-size: 0.76rem; }
+        .x-axis-label { text-align: center; font-weight: bold; color: var(--muted); margin-top: 5px; font-size: 0.76rem; }
+        .matrix-table th { font-size: 0.72rem; text-align: center; color: var(--muted); font-weight: normal; }
+        .matrix-table td { width: 50px; height: 40px; text-align: center; vertical-align: middle; border-radius: 0; color: white; font-weight: bold; font-size: 1rem; border: 1px solid rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+
+        .bg-critical { background-color: #d32f2f; color: white; }
+        .bg-severe { background-color: #f57c00; color: white; }
+        .bg-moderate { background-color: #fbc02d; color: #111 !important; }
+        .bg-sustainable { background-color: #388e3c; color: white; }
+        .legend-badge { display: inline-block; padding: 6px 10px; border-radius: 0; font-size: 0.75rem; font-weight: bold; margin: 0 2px; }
+
+        .table { --bs-table-bg: transparent; --bs-table-color: var(--text); --bs-table-border-color: var(--line); color: var(--text); }
+        .table-dark { --bs-table-bg: rgba(7, 12, 19, 0.70); --bs-table-color: #fff; }
+        .table-light, .table-secondary { --bs-table-bg: rgba(255,255,255,0.055); --bs-table-color: #fff; }
+        .table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-bg-type: rgba(255,255,255,0.032); color: var(--text); }
+        .table-hover > tbody > tr:hover > * { --bs-table-bg-state: rgba(79,140,255,0.16); color: #fff; }
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            display: inline-grid;
+            place-items: center;
+            padding: 0;
+            margin-left: 0;
+        }
+        .notification-menu {
+            position: relative;
+        }
+        .notification-menu summary {
+            list-style: none;
+            width: 36px;
+            height: 36px;
+            display: inline-grid;
+            place-items: center;
+            cursor: pointer;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            color: var(--text);
+        }
+        .notification-menu summary::-webkit-details-marker { display: none; }
+        .notification-count {
+            position: absolute;
+            top: -7px;
+            right: -6px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 18px;
+            background: var(--danger);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 0.68rem;
+            font-weight: 900;
+            padding: 0 5px;
+        }
+        .notification-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: min(360px, calc(100vw - 32px));
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(19,23,34,0.94), rgba(11,15,22,0.88));
+            box-shadow: var(--glass-shadow);
+            padding: 12px;
+            z-index: 20;
+            backdrop-filter: blur(18px) saturate(130%);
+            -webkit-backdrop-filter: blur(18px) saturate(130%);
+        }
+
+        body.theme-light {
+            --page: #caecf8;
+            --panel: rgba(245, 253, 255, 0.68);
+            --panel-2: rgba(237, 249, 254, 0.56);
+            --line: rgba(9, 66, 88, 0.16);
+            --line-strong: rgba(9, 66, 88, 0.24);
+            --text: #071a26;
+            --muted: #4f6674;
+            --blue: #1f56b7;
+            --green: #087b5b;
+            --danger: #e12d48;
+            --gold: #c98a00;
+            --glass-shadow: 0 24px 70px rgba(18, 91, 117, 0.18);
+            background:
+                radial-gradient(circle at 12% 10%, rgba(255,255,255,0.78), transparent 28%),
+                radial-gradient(circle at 72% 18%, rgba(98, 190, 216, 0.32), transparent 30%),
+                linear-gradient(180deg, #d7f3fb 0%, #bee5f2 48%, #d8f1f8 100%);
+            background-attachment: fixed;
+            color: var(--text);
+        }
+        body.theme-light .official-nav,
+        body.theme-light .hero-panel,
+        body.theme-light .side-panel,
+        body.theme-light .card {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.70), rgba(232,248,253,0.46)),
+                rgba(238, 250, 255, 0.42);
+            border-color: var(--line-strong);
+            box-shadow: var(--glass-shadow);
+        }
+        body.theme-light .hero-panel::before,
+        body.theme-light .side-panel::before,
+        body.theme-light .card::before {
+            background: linear-gradient(135deg, rgba(255,255,255,0.72), transparent 42%);
+            opacity: 0.9;
+        }
+        body.theme-light .brand-title,
+        body.theme-light .hero-title,
+        body.theme-light .quick-title,
+        body.theme-light .card-header,
+        body.theme-light .fw-bold,
+        body.theme-light h1,
+        body.theme-light h2,
+        body.theme-light h3 {
+            color: var(--text);
+        }
+        body.theme-light .nav-menu a {
+            color: #112936;
+        }
+        body.theme-light .nav-menu a.active,
+        body.theme-light .nav-menu a:hover {
+            color: #0a2a62;
+            background: rgba(31,86,183,0.14);
+            border-color: rgba(31,86,183,0.24);
+        }
+        body.theme-light .user-chip,
+        body.theme-light .metric-pill,
+        body.theme-light .quick-tile,
+        body.theme-light .assurance-card,
+        body.theme-light .notice-card,
+        body.theme-light .advanced-filter,
+        body.theme-light .card-header {
+            background: rgba(255,255,255,0.46);
+            border-color: var(--line);
+            color: var(--text);
+        }
+        body.theme-light .brand-logo {
+            background: rgba(255,255,255,0.78);
+            border-color: rgba(9,66,88,0.18);
+        }
+        body.theme-light .avatar {
+            background: #a9c6f0;
+            color: #082344;
+        }
+        body.theme-light .btn-nav,
+        body.theme-light .filter-tabs .btn,
+        body.theme-light .notification-menu summary,
+        body.theme-light .btn-outline-light {
+            color: #102d3d;
+            background: rgba(255,255,255,0.42);
+            border-color: var(--line);
+        }
+        body.theme-light .btn-nav:hover,
+        body.theme-light .filter-tabs .btn:hover,
+        body.theme-light .btn-outline-light:hover,
+        body.theme-light .quick-tile:hover {
+            color: #0b2c66;
+            background: rgba(31,86,183,0.14);
+            border-color: rgba(31,86,183,0.24);
+        }
+        body.theme-light .control-bar label,
+        body.theme-light .quick-subtitle,
+        body.theme-light .text-muted,
+        body.theme-light .muted {
+            color: var(--muted) !important;
+        }
+        body.theme-light select,
+        body.theme-light .form-control,
+        body.theme-light .form-select {
+            background-color: rgba(255,255,255,0.58) !important;
+            color: var(--text) !important;
+            border-color: var(--line) !important;
+        }
+        body.theme-light select option {
+            background: #e7f7fc;
+            color: var(--text);
+        }
+        body.theme-light .chart-track {
+            background: rgba(255,255,255,0.55);
+            border-color: var(--line);
+        }
+        body.theme-light .chart-fill {
+            background: linear-gradient(90deg, #1f56b7, #0d8c82);
+        }
+        body.theme-light .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text);
+            --bs-table-border-color: var(--line);
+            color: var(--text);
+        }
+        body.theme-light .table-dark,
+        body.theme-light .table-light,
+        body.theme-light .table-secondary {
+            --bs-table-bg: rgba(255,255,255,0.50);
+            --bs-table-color: var(--text);
+        }
+        body.theme-light .table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-bg-type: rgba(255,255,255,0.26);
+            color: var(--text);
+        }
+        body.theme-light .table-hover > tbody > tr:hover > * {
+            --bs-table-bg-state: rgba(31,86,183,0.12);
+            color: var(--text);
+        }
+        body.theme-light .text-light,
+        body.theme-light a.text-light {
+            color: var(--text) !important;
+        }
+        body.theme-light .badge.bg-dark {
+            background-color: #1f56b7 !important;
+        }
+        body.theme-light .matrix-table th,
+        body.theme-light .y-axis-label,
+        body.theme-light .x-axis-label {
+            color: var(--muted);
+        }
+        body.theme-light .danger-tools {
+            border-top-color: var(--line);
+        }
+        body.theme-light .alert {
+            background: rgba(255,255,255,0.58);
+            color: var(--text);
+            border-color: var(--line);
+        }
+        body.theme-light .notification-dropdown {
+            background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(232,248,253,0.78));
+            border-color: var(--line-strong);
+        }
+
+        @media (max-width: 992px) {
+            .command-grid { grid-template-columns: 1fr; }
+            .official-nav { margin: 8px; grid-template-columns: auto minmax(0, 1fr) auto; overflow-x: auto; }
+            .nav-menu { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; }
+            .workspace { padding: 8px 12px 22px; }
+            .quick-grid { grid-template-columns: 1fr; }
+            .assurance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .advanced-filter { grid-template-columns: 1fr; }
+            .advanced-filter .filter-search { grid-column: 1 / -1; }
+        }
+        @media (min-width: 993px) and (max-width: 1220px) {
+            .assurance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+<script>
+    (function () {
+        if ((localStorage.getItem("bankRiskTheme") || "light") === "light") {
+            document.body.classList.add("theme-light");
+        }
+    })();
+</script>
+
+<nav class="official-nav">
+    <div class="d-flex align-items-center gap-3">
+        <img src="/static/risks/logo.png" class="brand-logo" alt="Bank logo">
+        <div>
+            <div class="brand-title">Bank Risk System</div>
+            <div class="brand-subtitle">Enterprise Risk Command Centre</div>
+        </div>
+    </div>
+    <div class="nav-menu">
+        <a href="/" class="active"><i class="fas fa-grid-2 me-2"></i>Dashboard</a>
+        <a href="{% url 'executive-dashboard' %}" target="_blank"><i class="fas fa-chart-line me-2"></i>Executive</a>
+        <a href="{% url 'official_report' %}" target="_blank"><i class="fas fa-file-signature me-2"></i>Official Report</a>
+        <a href="{% url 'board-explanation' %}?filter={{ filter_type|default:'approved' }}{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" target="_blank"><i class="fas fa-landmark me-2"></i>Board Brief</a>
+        {% if user.is_staff %}<a href="/admin/"><i class="fas fa-shield-halved me-2"></i>Admin</a>{% endif %}
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="user-chip">
+            <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+            <div>
+                <div class="small text-muted">Signed in</div>
+                <div class="fw-bold">{{ user.username|title }}</div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-nav btn-sm theme-toggle" id="themeToggle" title="Switch theme" aria-label="Switch theme">
+            <i class="fas fa-sun"></i>
+        </button>
+        <details class="notification-menu">
+            <summary title="Notifications" aria-label="Notifications">
+                <i class="fas fa-bell"></i>
+                {% if notification_count %}<span class="notification-count">{{ notification_count }}</span>{% endif %}
+            </summary>
+            <div class="notification-dropdown">
+                <div class="quick-title mb-2">Notifications</div>
+                {% for item in notifications|slice:":5" %}
+                    <div class="notice-card {{ item.level }}">
+                        <div class="fw-bold">{{ item.title }}</div>
+                        <div class="small text-muted">{{ item.body }}</div>
+                    </div>
+                {% empty %}
+                    <div class="small text-muted">No urgent notifications.</div>
+                {% endfor %}
+                <a href="{% url 'notifications' %}" class="btn btn-primary btn-sm mt-2">View All Alerts</a>
+            </div>
+        </details>
+        <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button class="btn btn-nav btn-sm">Log Out</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container-fluid workspace">
+
+    {% if request.GET.deleted_all %}
+        <div class="alert alert-warning text-center">
+            Deleted {{ request.GET.deleted_count|default:"0" }} risk(s) from all departments.
+        </div>
+    {% endif %}
+
+    {% if request.GET.deleted_area %}
+        <div class="alert alert-warning text-center">
+            Deleted {{ request.GET.deleted_count|default:"0" }} risk(s) from {{ request.GET.deleted_area }} only.
+        </div>
+    {% endif %}
+
+    {% if request.GET.delete_error %}
+        <div class="alert alert-danger text-center">
+            Nothing was deleted. Choose a department, enter a reason, and type DELETE exactly.
+        </div>
+    {% endif %}
+
+    <section class="command-grid">
+        <div class="hero-panel">
+            <div>
+                <div class="eyebrow">Executive Workspace</div>
+                <h1 class="hero-title">Risk Heatmap Dashboard</h1>
+                <p class="hero-copy">
+                    Real-time oversight of inherent exposure, residual risk, action plans, incidents, and management escalation.
+                </p>
+
+                <div class="metric-strip">
+                    <span class="metric-pill"><i class="fas fa-layer-group"></i> Total Risks: {{ total_risks }}</span>
+                    <span class="metric-pill danger"><i class="fas fa-triangle-exclamation"></i> Critical: {{ critical_risks }}</span>
+                    <span class="metric-pill danger"><i class="fas fa-arrow-up-right-dots"></i> Escalated: {{ escalated_risks }}</span>
+                    <span class="metric-pill info"><i class="fas fa-list-check"></i> Open Actions: {{ open_actions }}</span>
+                    <span class="metric-pill warning"><i class="fas fa-clock"></i> Overdue: {{ overdue_actions }}</span>
+                    <span class="metric-pill"><i class="fas fa-clipboard-list"></i> Incidents: {{ total_incidents }}</span>
+                    <span class="metric-pill danger"><i class="fas fa-siren-on"></i> Open Incidents: {{ open_incidents }}</span>
+                    <span class="metric-pill"><i class="fas fa-money-bill-trend-up"></i> Loss: {{ total_loss_amount }}</span>
+                </div>
+            </div>
+
+            <div>
+                <form method="get" class="control-bar">
+                    <label class="fw-bold">Department</label>
+                    <select name="area" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                        <option value="">All Departments</option>
+                        {% for a in available_areas %}
+                            <option value="{{ a }}" {% if selected_area == a %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="filter" value="{{ filter_type|default:'all' }}">
+                </form>
+
+                <div class="filter-tabs">
+                    <a href="?filter=all{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm">All Risks</a>
+                    <a href="?filter=draft{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm">Drafts</a>
+                    <a href="?filter=reviewed{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm">Reviewed</a>
+                    <a href="?filter=approved{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm">Approved</a>
+                    <a href="?filter=closed{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm">Closed</a>
+                </div>
+
+                <form method="get" class="advanced-filter">
+                    <input type="hidden" name="area" value="{{ selected_area }}">
+                    <input type="hidden" name="filter" value="{{ filter_type|default:'all' }}">
+                    <input type="search" name="q" value="{{ query_text }}" class="form-control form-control-sm filter-search" placeholder="Search risk, department, owner...">
+                    <input type="text" name="owner" value="{{ selected_owner }}" class="form-control form-control-sm" placeholder="Owner">
+                    <select name="rating" class="form-select form-select-sm">
+                        <option value="">Rating</option>
+                        {% for value,label in rating_choices %}
+                            <option value="{{ value }}" {% if selected_rating == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="action_status" class="form-select form-select-sm">
+                        <option value="">Action status</option>
+                        {% for value,label in action_status_choices %}
+                            <option value="{{ value }}" {% if selected_action_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="escalation" class="form-select form-select-sm">
+                        <option value="">Escalation</option>
+                        {% for value,label in escalation_status_choices %}
+                            <option value="{{ value }}" {% if selected_escalation == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="due" class="form-select form-select-sm">
+                        <option value="">Due date</option>
+                        <option value="overdue" {% if selected_due == "overdue" %}selected{% endif %}>Overdue</option>
+                        <option value="next30" {% if selected_due == "next30" %}selected{% endif %}>Next 30 days</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm">Filter</button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">Reset</a>
+                </form>
+            </div>
+        </div>
+
+        {% if user.is_staff %}
+        <aside class="side-panel p-4">
+            <div class="quick-title">Executive Shortcuts</div>
+            <div class="quick-subtitle">Jump into high-value actions without leaving the dashboard.</div>
+
+            <div class="quick-grid">
+                {% if can_submit_risk %}
+                <a href="{% url 'risk-create' %}" class="quick-tile">
+                    <i class="fas fa-square-plus"></i>
+                    Add Risk
+                </a>
+                {% endif %}
+                <a href="{% url 'compliance-assistant' %}" class="quick-tile">
+                    <i class="fas fa-brain"></i>
+                    Risk AI
+                </a>
+                <a href="{% url 'risk-calendar' %}" class="quick-tile">
+                    <i class="fas fa-calendar-check"></i>
+                    Calendar
+                </a>
+                <a href="{% url 'notifications' %}" class="quick-tile">
+                    <i class="fas fa-bell"></i>
+                    Alerts{% if notification_count %} ({{ notification_count }}){% endif %}
+                </a>
+                <a href="{% url 'official_report' %}" target="_blank" class="quick-tile">
+                    <i class="fas fa-file-pdf"></i>
+                    Official Report
+                </a>
+                <a href="/ai-extract/" class="quick-tile">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    AI Extract
+                </a>
+                <a href="{% url 'board-explanation' %}?filter={{ filter_type|default:'approved' }}{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" target="_blank" class="quick-tile">
+                    <i class="fas fa-landmark"></i>
+                    Board Brief
+                </a>
+                <a href="{% url 'executive-dashboard' %}" target="_blank" class="quick-tile">
+                    <i class="fas fa-chart-line"></i>
+                    Executive View
+                </a>
+                <a href="/admin/" class="quick-tile">
+                    <i class="fas fa-database"></i>
+                    Manage Data
+                </a>
+                <a href="{% url 'export-csv' %}" class="quick-tile">
+                    <i class="fas fa-file-export"></i>
+                    Export CSV
+                </a>
+                {% if can_review_risk %}
+                <a href="{% url 'audit-log' %}" class="quick-tile">
+                    <i class="fas fa-clipboard-list"></i>
+                    Audit Log
+                </a>
+                {% endif %}
+                {% if can_approve_delete %}
+                <a href="{% url 'backup-tools' %}" class="quick-tile">
+                    <i class="fas fa-server"></i>
+                    Backup
+                </a>
+                {% endif %}
+            </div>
+
+            {% if notifications %}
+            <div class="mt-4">
+                <div class="quick-title">Notifications</div>
+                {% for item in notifications|slice:":4" %}
+                    <div class="notice-card {{ item.level }}">
+                        <div class="fw-bold">{{ item.title }}</div>
+                        <div class="small text-muted">{{ item.body }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <details class="danger-tools maintenance-tools">
+                <summary><i class="fas fa-screwdriver-wrench me-2"></i>Maintenance tools</summary>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <a href="{% url 'bulk-approve-drafts' %}"
+                       onclick="return confirm('Approve ALL draft risks? This cannot be undone.')"
+                       class="btn btn-danger btn-sm">
+                        Approve Drafts
+                    </a>
+
+                    {% if available_areas %}
+                    <form method="post" action="{% url 'clear-risks' %}" class="d-flex flex-wrap gap-1 align-items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="scope" value="department">
+                        <select name="area" class="form-select form-select-sm w-auto" required>
+                            <option value="">Department</option>
+                            {% for a in available_areas %}
+                                <option value="{{ a }}" {% if selected_area == a %}selected{% endif %}>{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="delete_reason" class="form-control form-control-sm w-auto" placeholder="Reason" required>
+                        <input type="text" name="confirm_text" class="form-control form-control-sm w-auto" placeholder="Type DELETE" required>
+                        <button type="submit"
+                                onclick="return confirm('Delete only the selected department risks? Other departments will stay saved.')"
+                                class="btn btn-outline-danger btn-sm">
+                            Delete Department
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'clear-risks' %}" class="d-flex flex-wrap gap-1 align-items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="scope" value="all">
+                        <input type="text" name="delete_reason" class="form-control form-control-sm w-auto" placeholder="Reason" required>
+                        <input type="text" name="confirm_text" class="form-control form-control-sm w-auto" placeholder="Type DELETE" required>
+                        <button type="submit"
+                                onclick="return confirm('Delete ALL department risks? This cannot be undone.')"
+                                class="btn btn-outline-danger btn-sm">
+                            Clear All
+                        </button>
+                    </form>
+                </div>
+            </details>
+        </aside>
+        {% endif %}
+    </section>
+
+    <section class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>System Assurance Cockpit</span>
+            <span class="small text-muted">15 live checks from risks, controls, incidents, actions, and approvals</span>
+        </div>
+        <div class="card-body">
+            <div class="assurance-grid">
+                {% for item in assurance_items %}
+                    <div class="assurance-card {{ item.tone }}">
+                        <span class="assurance-label">{{ item.label }}</span>
+                        <strong class="assurance-value">{{ item.value }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <div class="card mt-4 border-danger">
+        <div class="card-header text-danger border-danger d-flex justify-content-between align-items-center">
+            <span>Early Warning Dashboard</span>
+            <span class="small text-muted">Items requiring management attention</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Critical Residual</div>
+                    {% for risk in early_warnings.critical %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.area_name|default:"Unspecified" }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Overdue Actions</div>
+                    {% for risk in early_warnings.overdue %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.days_overdue }} day(s)</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Worsening Trend</div>
+                    {% for risk in early_warnings.worsening %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.area_name|default:"Unspecified" }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Missing Owners</div>
+                    {% for risk in early_warnings.missing_owner %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.area_name|default:"Unspecified" }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Escalated</div>
+                    {% for risk in early_warnings.escalated %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.escalation_status }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">Weak Controls</div>
+                    {% for risk in early_warnings.weak_controls %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.area_name|default:"Unspecified" }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+                <div class="col-lg col-md-6">
+                    <div class="fw-bold text-danger mb-2">No Action Plan</div>
+                    {% for risk in early_warnings.missing_action %}
+                        <div class="small mb-1">{{ risk.reference_id }} - {{ risk.residual_rating }}</div>
+                    {% empty %}
+                        <div class="small text-muted">None</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
+                <div class="card-header">Residual Rating Distribution</div>
+                <div class="card-body">
+                    {% for item in rating_chart %}
+                        <div class="chart-row">
+                            <span class="small fw-bold">{{ item.label }}</span>
+                            <div class="chart-track"><div class="chart-fill" style="width: {{ item.percent }}%;"></div></div>
+                            <span class="small text-end">{{ item.count }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
+                <div class="card-header">Risk by Department</div>
+                <div class="card-body">
+                    {% for dept in department_chart %}
+                        <div class="chart-row">
+                            <a class="small fw-bold text-decoration-none text-light" href="{% url 'department-detail' dept.area %}">{{ dept.area|truncatechars:18 }}</a>
+                            <div class="chart-track">
+                                <div class="chart-fill" style="width: {% if department_chart.0.score %}{% widthratio dept.score department_chart.0.score 100 %}{% else %}0{% endif %}%;"></div>
+                            </div>
+                            <span class="small text-end">{{ dept.score }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="small text-muted">No departments recorded yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
+                <div class="card-header">Overdue Action Trend</div>
+                <div class="card-body">
+                    {% for item in overdue_trend %}
+                        <div class="chart-row">
+                            <span class="small fw-bold">{{ item.label }}</span>
+                            <div class="chart-track">
+                                <div class="chart-fill" style="width: {% if total_risks %}{% widthratio item.count total_risks 100 %}{% else %}0{% endif %}%;"></div>
+                            </div>
+                            <span class="small text-end">{{ item.count }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
+                <div class="card-header">Incident / Loss Trend</div>
+                <div class="card-body">
+                    {% for incident in incident_trend %}
+                        <div class="chart-row">
+                            <span class="small fw-bold">{{ incident.label }}</span>
+                            <div class="chart-track"><div class="chart-fill" style="width: 60%;"></div></div>
+                            <span class="small text-end">{{ incident.loss }}</span>
+                        </div>
+                    {% empty %}
+                        <div class="small text-muted">No incidents recorded yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- (Heatmap cards stay same as your last working version; unchanged) -->
+    <div class="row g-4 justify-content-center">
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-header text-primary border-primary">1. Master Risk Legend</div>
+                <div class="card-body text-center">
+                    <div class="matrix-container">
+                        <div class="y-axis-label">PROBABILITY</div>
+                        <div>
+                            <table class="matrix-table">
+                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
+                                <tr><th class="text-end pe-1">VH</th><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-critical"></td><td class="bg-critical"></td><td class="bg-critical"></td></tr>
+                                <tr><th class="text-end pe-1">H</th><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-severe"></td><td class="bg-critical"></td><td class="bg-critical"></td></tr>
+                                <tr><th class="text-end pe-1">Mod</th><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-critical"></td></tr>
+                                <tr><th class="text-end pe-1">L</th><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td><td class="bg-severe"></td></tr>
+                                <tr><th class="text-end pe-1">VL</th><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td></tr>
+                            </table>
+                            <div class="x-axis-label">IMPACT</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-top pt-3">
+                        <span class="legend-badge bg-critical">Critical</span>
+                        <span class="legend-badge bg-severe">Severe</span>
+                        <span class="legend-badge bg-moderate">Moderate</span>
+                        <span class="legend-badge bg-sustainable">Sustainable</span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Inherent -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-header text-danger border-danger">2. Inherent Risk (Before)</div>
+                <div class="card-body">
+                    <div class="matrix-container">
+                        <div class="y-axis-label">PROBABILITY</div>
+                        <div>
+                            <table class="matrix-table">
+                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
+                                <tr><th class="text-end pe-1">VH</th>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very High'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Very High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">H</th>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'High'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ inherent_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ inherent_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'High'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">Mod</th>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Medium'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Medium'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">L</th>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Low'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Low'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">VL</th>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very Low'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very Low'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                            </table>
+                            <div class="x-axis-label">IMPACT</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Residual -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100">
+                <div class="card-header text-success border-success">3. Residual Risk (After)</div>
+                <div class="card-body">
+                    <div class="matrix-container">
+                        <div class="y-axis-label">PROBABILITY</div>
+                        <div>
+                            <table class="matrix-table">
+                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
+                                <tr><th class="text-end pe-1">VH</th>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very High'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ residual_matrix|get_item:'Very High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">H</th>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'High'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ residual_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-severe">{{ residual_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'High'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">Mod</th>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Medium'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-severe">{{ residual_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-critical">{{ residual_matrix|get_item:'Medium'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">L</th>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Low'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-severe">{{ residual_matrix|get_item:'Low'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                                <tr><th class="text-end pe-1">VL</th>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Very Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very Low'|get_item:'High'|default:'' }}</td>
+                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very Low'|get_item:'Very High'|default:'' }}</td>
+                                </tr>
+                            </table>
+                            <div class="x-axis-label">IMPACT</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if department_scores %}
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Department Risk Score</span>
+            <span class="small text-muted">Higher score means higher management attention</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rank</th>
+                            <th>Department</th>
+                            <th>Score</th>
+                            <th>Total</th>
+                            <th>Critical</th>
+                            <th>Severe</th>
+                            <th>Overdue</th>
+                            <th>Open Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dept in department_scores %}
+                        <tr>
+                            <td class="fw-bold">{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'department-detail' dept.area %}" class="text-light fw-bold text-decoration-none">
+                                    {{ dept.area }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-dark">{{ dept.score }}</span></td>
+                            <td>{{ dept.total }}</td>
+                            <td><span class="badge bg-danger">{{ dept.critical }}</span></td>
+                            <td><span class="badge bg-warning text-dark">{{ dept.severe }}</span></td>
+                            <td><span class="badge bg-danger">{{ dept.overdue }}</span></td>
+                            <td>{{ dept.open_actions }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Detailed Risk Register</span>
+            <a href="{% url 'export-csv' %}" class="btn btn-primary btn-sm">⬇ Export CSV</a>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Status</th>
+                            <th>Description & Analysis</th>
+                            <th>Inherent</th>
+                            <th>Residual</th>
+                            <th>Control</th>
+                            <th>Trend</th>
+                            <th>Escalation</th>
+                            <th>Risk Owner</th>
+                            <th>Action Plan</th>
+                            <th>Incidents</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% regroup risks by area_name as area_groups %}
+
+{% for group in area_groups %}
+<tr class="table-secondary">
+    <td colspan="12" class="fw-bold">
+        <a href="{% url 'department-detail' group.grouper %}" class="text-light text-decoration-none">
+            {{ group.grouper }}
+        </a>
+    </td>
+</tr>
+
+{% for risk in group.list %}
+<tr>
+    <td class="fw-bold">{{ risk.reference_id }}</td>
+    <td>
+        {% if risk.workflow_status == "Draft" %}
+            <span class="badge bg-warning text-dark">Draft</span>
+        {% elif risk.workflow_status == "Reviewed" %}
+            <span class="badge bg-info text-dark">Reviewed</span>
+        {% elif risk.workflow_status == "Closed" %}
+            <span class="badge bg-secondary">Closed</span>
+        {% else %}
+            <span class="badge bg-success">Approved</span>
+        {% endif %}
+    </td>
+    <td>
+        <div class="fw-bold">{{ risk.description }}</div>
+        <div class="small text-muted">
+            <b>Cause:</b> {{ risk.caused_by }}<br>
+            <b>Impact:</b> {{ risk.consequences }}
+        </div>
+    </td>
+    <td><span class="badge bg-{{ risk.inherent_rating|risk_color }}">
+{{ risk.inherent_rating }}</span></td>
+    <td><span class="badge bg-{{ risk.residual_rating|risk_color }}">
+{{ risk.residual_rating }}</span></td>
+    <td>
+        {% if risk.control_effectiveness == "Weak" %}
+            <span class="badge bg-danger">Weak</span>
+        {% elif risk.control_effectiveness == "Strong" %}
+            <span class="badge bg-success">Strong</span>
+        {% elif risk.control_effectiveness == "Moderate" %}
+            <span class="badge bg-warning text-dark">Moderate</span>
+        {% else %}
+            <span class="badge bg-secondary">Not Assessed</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if risk.residual_trend_label == "Improving" %}
+            <span class="badge bg-success">Improving</span>
+        {% elif risk.residual_trend_label == "Worsening" %}
+            <span class="badge bg-danger">Worsening</span>
+        {% elif risk.residual_trend_label == "Stable" %}
+            <span class="badge bg-secondary">Stable</span>
+        {% else %}
+            <span class="badge bg-info text-dark">New</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if risk.escalation_status == "Board Attention" %}
+            <span class="badge bg-danger">Board</span>
+        {% elif risk.escalation_status == "Management Attention" %}
+            <span class="badge bg-warning text-dark">Management</span>
+        {% else %}
+            <span class="badge bg-secondary">Normal</span>
+        {% endif %}
+    </td>
+    <td>{{ risk.risk_owner }}</td>
+    <td>
+        {% if risk.mitigation_action %}
+            <div class="fw-bold small">
+                {{ risk.action_status }} - {{ risk.action_progress }}%
+                {% if risk.is_action_overdue %}
+                    <span class="badge bg-danger ms-1">{{ risk.days_overdue }} day(s) overdue</span>
+                {% endif %}
+            </div>
+            <div class="small">{{ risk.mitigation_action|truncatechars:90 }}</div>
+            <div class="small text-muted">
+                <b>Officer:</b> {{ risk.action_responsible_officer|default:"-" }}<br>
+                <b>Due:</b> {{ risk.action_due_date|default:"-" }}
+            </div>
+        {% else %}
+            <span class="text-muted small">No action plan recorded</span>
+        {% endif %}
+    </td>
+    <td>
+        {% with incident_count=risk.incidents.count %}
+            {% if incident_count %}
+                <span class="badge bg-danger">{{ incident_count }}</span>
+            {% else %}
+                <span class="text-muted small">0</span>
+            {% endif %}
+        {% endwith %}
+    </td>
+    <td>
+        <div class="row-actions">
+            <a href="{% url 'risk-detail' risk.id %}" class="btn btn-outline-light btn-sm">View</a>
+            {% if can_review_risk %}
+                <a href="{% url 'risk-edit' risk.id %}" class="btn btn-primary btn-sm">Edit</a>
+                <a href="{% url 'risk-action-update' risk.id %}" class="btn btn-info btn-sm">Action</a>
+            {% endif %}
+            {% if can_submit_risk %}
+                <a href="{% url 'risk-incident-create' risk.id %}" class="btn btn-warning btn-sm">Incident</a>
+            {% endif %}
+            {% if can_approve_delete %}
+                <a href="{% url 'risk-delete' risk.id %}" class="btn btn-danger btn-sm">Delete</a>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% endfor %}
+
+{% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const key = "bankRiskTheme";
+        const body = document.body;
+        const toggle = document.getElementById("themeToggle");
+        const icon = toggle ? toggle.querySelector("i") : null;
+
+        function applyTheme(theme) {
+            body.classList.toggle("theme-light", theme === "light");
+            if (icon) {
+                icon.className = theme === "light" ? "fas fa-moon" : "fas fa-sun";
+            }
+            if (toggle) {
+                toggle.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+                toggle.setAttribute("aria-label", toggle.title);
+            }
+        }
+
+        const savedTheme = localStorage.getItem(key) || "light";
+        applyTheme(savedTheme);
+
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                const nextTheme = body.classList.contains("theme-light") ? "dark" : "light";
+                localStorage.setItem(key, nextTheme);
+                applyTheme(nextTheme);
+            });
+        }
+    })();
+</script>
+</body>
+</html>
+

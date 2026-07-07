@@ -1,0 +1,12 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Notifications | Bank Risk System{% endblock %}
+{% block module_name %}Notifications{% endblock %}
+{% block content %}
+<section class="hero"><div class="eyebrow">Notification Centre</div><h1>Management attention queue</h1><p class="muted">Overdue actions, critical risks, new incidents, and pending approvals.</p></section>
+<section class="grid-4">
+    <article class="panel"><div class="eyebrow">Overdue</div>{% for risk in notifications.overdue %}<p><a href="{% url 'risk-detail' risk.id %}">{{ risk.reference_id }}</a> - {{ risk.days_overdue }} day(s)</p>{% empty %}<p class="muted">None</p>{% endfor %}</article>
+    <article class="panel"><div class="eyebrow">Critical</div>{% for risk in notifications.critical %}<p><a href="{% url 'risk-detail' risk.id %}">{{ risk.reference_id }}</a> - {{ risk.area_name|default:"Unspecified" }}</p>{% empty %}<p class="muted">None</p>{% endfor %}</article>
+    <article class="panel"><div class="eyebrow">Incidents</div>{% for incident in notifications.incidents %}<p>{{ incident.title }} - {{ incident.status }}</p>{% empty %}<p class="muted">None</p>{% endfor %}</article>
+    <article class="panel"><div class="eyebrow">Approvals</div>{% for risk in notifications.pending %}<p><a href="{% url 'risk-detail' risk.id %}">{{ risk.reference_id }}</a> - {{ risk.workflow_status }}</p>{% empty %}<p class="muted">None</p>{% endfor %}</article>
+</section>
+{% endblock %}

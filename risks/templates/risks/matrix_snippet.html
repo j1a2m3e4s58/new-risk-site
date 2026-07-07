@@ -1,0 +1,44 @@
+{% load risk_extras %}
+<div class="d-flex">
+    <div class="y-axis-label me-2">PROBABILITY</div>
+
+    <div class="flex-grow-1">
+        <table class="matrix-table">
+            <tr>
+                <th></th> {% for i in impacts %}<th>{{ i|level_label|slice:":1" }}<span class="d-none d-md-inline">{{ i|level_label|slice:"1:" }}</span></th>{% endfor %}
+            </tr>
+
+            {% for prob in probabilities %}
+            <tr>
+                <th class="text-end pe-2">{{ prob|level_label|slice:":1" }}<span class="d-none d-md-inline">{{ prob|level_label|slice:"1:" }}</span></th>
+                
+                {% for imp in impacts %}
+                    {% with p=prob i=imp %}
+                    {% with combo=p|add:"-"|add:i %}
+                        
+                        {% if combo in "Very High-Very High,Very High-High,High-Very High,High-High,Medium-Very High,Very High-Medium,Low-Very High" %}
+                            {%  if matrix_type == "legend" %}<td class="bg-critical"></td>
+                            {% else %}<td class="bg-critical">{{ data_source|get_item:p|get_item:i|default:"" }}</td>{% endif %}
+                        
+                        {% elif combo in "Very High-Low,High-Medium,High-Low,Medium-High,Low-High,Very Low-Very High" %}
+                             {%  if matrix_type == "legend" %}<td class="bg-severe"></td>
+                             {% else %}<td class="bg-severe">{{ data_source|get_item:p|get_item:i|default:"" }}</td>{% endif %}
+
+                        {% elif combo in "Very High-Very Low,High-Very Low,Medium-Medium,Medium-Low,Low-Medium,Very Low-High,Very Low-Medium" %}
+                             {%  if matrix_type == "legend" %}<td class="bg-moderate"></td>
+                             {% else %}<td class="bg-moderate">{{ data_source|get_item:p|get_item:i|default:"" }}</td>{% endif %}
+                        
+                        {% else %}
+                             {%  if matrix_type == "legend" %}<td class="bg-sustainable"></td>
+                             {% else %}<td class="bg-sustainable">{{ data_source|get_item:p|get_item:i|default:"" }}</td>{% endif %}
+                        {% endif %}
+
+                    {% endwith %}
+                    {% endwith %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+        <div class="x-axis-label">IMPACT</div>
+    </div>
+</div>

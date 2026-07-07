@@ -1,0 +1,303 @@
+{% load risk_extras %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Official Risk Report</title>
+    <style>
+        /* LANDSCAPE MODE */
+        @page { size: A4 landscape; margin: 0.5cm; }
+        
+        :root { --line: rgba(188,207,238,.22); --line-strong: rgba(188,207,238,.32); --text:#edf4ff; --muted:#92a0b4; --blue:#4f8cff; --green:#18a66a; --glass-shadow:0 24px 70px rgba(0,0,0,.34); }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: var(--text); 
+            background: radial-gradient(circle at 12% 8%, rgba(79,140,255,.14), transparent 30%), radial-gradient(circle at 78% 18%, rgba(24,166,106,.10), transparent 28%), linear-gradient(180deg,#03070b 0%,#050a0f 48%,#030608 100%);
+            background-attachment: fixed;
+            padding: 20px; 
+            width: 100%; 
+            margin: 0 auto; 
+        }
+        
+        .header { text-align: center; border: 1px solid var(--line-strong); background: linear-gradient(135deg, rgba(34,41,58,.58), rgba(10,15,22,.42)), rgba(12,17,25,.34); box-shadow: var(--glass-shadow); backdrop-filter: blur(18px) saturate(128%); -webkit-backdrop-filter: blur(18px) saturate(128%); padding: 18px; margin-bottom: 25px; }
+        .logo-text { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .sub-text { font-size: 14px; color: var(--muted); margin-top: 5px; font-weight: bold; }
+        
+        /* TABLE STYLES */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        th, td { border: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: middle; background: rgba(7,12,19,.54); color: var(--text); }
+        
+        /* EDIT MODE STYLES */
+        .editable-active td { cursor: text; border: 1px dashed #2196f3; }
+        .editable-active td:focus { background-color: rgba(79,140,255,.18); outline: none; }
+        
+        /* HEADER COLORS */
+        .col-id { background-color: rgba(255,255,255,.08) !important; width: 3%; }
+        .col-category { background-color: rgba(255,255,255,.08) !important; width: 8%; }
+        .col-desc { background-color: rgba(255,255,255,.08) !important; width: 15%; }
+        
+        /* --- UPDATED COLORS START HERE --- */
+        
+        /* 1. LIKELIHOOD - Grey */
+        .col-likelihood { background-color: #808080 !important; color: white; width: 5%; text-align: center; }
+        
+        /* 2. IMPACT - Lemon Green */
+        .col-impact { background-color: #ADFF2F !important; color: black; width: 5%; text-align: center; }
+        
+        /* 3. RISK RANK - Orange (Kept as before) */
+        .col-rank { background-color: #FFA500 !important; color: black; font-weight: bold; width: 5%; text-align: center; }
+        
+        /* 4. RISK TRIGGER - Red */
+        .col-trigger { background-color: #FF0000 !important; color: white; width: 12%; }
+        
+        /* --- UPDATED COLORS END HERE --- */
+
+        .col-residual { background-color: #006400 !important; color: white; font-weight: bold; width: 9%; text-align: center; }
+
+        /* SIGNATURE STYLES */
+        .signatures { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 80px; 
+            page-break-inside: avoid; 
+        }
+        .sig-block { 
+            width: 30%; 
+            border-top: 1px solid var(--line-strong); 
+            padding-top: 10px; 
+            text-align: center; 
+            font-size: 14px; 
+            font-weight: bold; 
+        }
+
+        /* BUTTONS */
+        .btn-container { text-align: right; margin-bottom: 15px; display: flex; justify-content: flex-end; gap: 8px; flex-wrap: nowrap; overflow-x: auto; }
+        .btn { border: 1px solid var(--line); padding: 10px 20px; cursor: pointer; border-radius: 0; font-weight: bold; font-size: 12px; transition: all 0.3s ease; }
+        
+        .btn-edit { background-color: #ff9800; color: white; }
+        .btn-excel { background-color: #2e7d32; color: white; }
+        .btn-print { background-color: #007bff; color: white; }
+        
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn.active { background-color: #e65100; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+
+        /* ADMIN EDIT BOX */
+        .admin-controls { background: rgba(79,140,255,.10); padding: 10px; border: 1px solid rgba(79,140,255,.36); margin-bottom: 15px; border-radius: 0; }
+        textarea { width: 100%; height: 60px; padding: 5px; font-family: inherit; font-size: 12px; background: rgba(7,12,19,.54); color: var(--text); border: 1px solid var(--line); }
+        .summary-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
+        .summary-card { border: 1px solid var(--line); padding: 8px; background: rgba(255,255,255,.045); text-align: center; }
+        .summary-card strong { display: block; font-size: 18px; margin-top: 3px; }
+        .quality-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:8px; margin-bottom:16px; }
+        .quality-card { border:1px solid rgba(245,183,46,.45); background:rgba(245,183,46,.08); padding:9px; font-size:12px; font-weight:700; }
+        .quality-card strong { display:block; font-size:17px; margin-top:3px; color:var(--text); }
+        .theme-toggle { width:38px; padding:10px 0; text-align:center; }
+        body.theme-light { --line:rgba(9,66,88,.16); --line-strong:rgba(9,66,88,.24); --text:#071a26; --muted:#4f6674; --blue:#1f56b7; --green:#087b5b; --glass-shadow:0 24px 70px rgba(18,91,117,.18); background:radial-gradient(circle at 12% 10%, rgba(255,255,255,.78), transparent 28%), radial-gradient(circle at 72% 18%, rgba(98,190,216,.32), transparent 30%), linear-gradient(180deg,#d7f3fb 0%,#bee5f2 48%,#d8f1f8 100%); background-attachment:fixed; color:var(--text); }
+        body.theme-light .header { background:linear-gradient(135deg, rgba(255,255,255,.70), rgba(232,248,253,.46)), rgba(238,250,255,.42); border-color:var(--line-strong); box-shadow:var(--glass-shadow); }
+        body.theme-light th,
+        body.theme-light td,
+        body.theme-light textarea { background:rgba(255,255,255,.58); color:var(--text); border-color:var(--line); }
+        body.theme-light .summary-card,
+        body.theme-light .quality-card,
+        body.theme-light .admin-controls { background:rgba(255,255,255,.46); border-color:var(--line); color:var(--text); }
+        body.theme-light .sub-text { color:var(--muted); }
+
+        @media print {
+            .btn-container, .admin-controls { display: none; }
+            body { padding: 0; margin: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .editable-active td { border: 1px solid #444 !important; }
+        }
+    </style>
+    
+    <script>
+        function exportTableToExcel(tableID, filename = ''){
+            var downloadLink;
+            var dataType = 'application/vnd.ms-excel';
+            var tableSelect = document.getElementById(tableID);
+            var tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
+            filename = filename?filename+'.xls':'excel_data.xls';
+            downloadLink = document.createElement("a");
+            document.body.appendChild(downloadLink);
+            
+            if(navigator.msSaveOrOpenBlob){
+                var blob = new Blob(['\ufeff', tableHTML], { type: dataType });
+                navigator.msSaveOrOpenBlob( blob, filename);
+            }else{
+                downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+                downloadLink.download = filename;
+                downloadLink.click();
+            }
+        }
+
+        function toggleEditMode() {
+            var table = document.getElementById("riskTable");
+            var btn = document.getElementById("editBtn");
+            var isEditable = table.contentEditable === "true";
+
+            if (isEditable) {
+                table.contentEditable = "false";
+                table.classList.remove("editable-active");
+                btn.innerHTML = "ENABLE EDITING";
+                btn.classList.remove("active");
+                alert("Editing Disabled. You can now Print or Export.");
+            } else {
+                table.contentEditable = "true";
+                table.classList.add("editable-active");
+                btn.innerHTML = "FINISH EDITING";
+                btn.classList.add("active");
+                alert("EDIT MODE ACTIVE\n\nClick any cell to change the text.\nChanges will appear in Excel & Print.\n(Note: Changes are temporary and not saved to database)");
+            }
+        }
+
+    </script>
+</head>
+<body>
+    <script>
+        (function () {
+            if ((localStorage.getItem("bankRiskTheme") || "light") === "light") document.body.classList.add("theme-light");
+        })();
+    </script>
+
+    <div class="btn-container">
+        <button type="button" id="themeToggle" class="btn theme-toggle" title="Switch theme" aria-label="Switch theme">L</button>
+        <button id="editBtn" onclick="toggleEditMode()" class="btn btn-edit">ENABLE EDITING</button>
+        <button onclick="exportTableToExcel('riskTable', 'Risk_Report_Export')" class="btn btn-excel">EXPORT TO EXCEL</button>
+        <button onclick="window.print()" class="btn btn-print">PRINT REPORT</button>
+        <!-- ========= AI_EXTRACT_START ========= -->
+<a href="/ai-extract/" class="btn" style="background:#6a1b9a; color:white; text-decoration:none; display:inline-block; padding:10px 20px; border-radius:5px; font-weight:bold; font-size:12px;">AI EXTRACT (Paste KRI)</a>
+<!-- ========= AI_EXTRACT_END ========= -->
+
+    </div>
+
+    <div class="header">
+        <div class="logo-text">Bank Risk Management System</div>
+        <div class="sub-text">Official Risk Register Report</div>
+        <div class="sub-text" style="font-size: 12px; color: #555;">Generated: {{ generated_at|date:"Y-m-d H:i" }} | User: {{ generated_by }}</div>
+    </div>
+
+    {% if is_admin %}
+        <form method="POST" class="admin-controls">
+            {% csrf_token %}
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">Executive Summary (Admin):</label>
+            <textarea name="executive_summary">{{ config.executive_summary }}</textarea>
+            <div style="text-align:right; margin-top:5px;">
+                <button type="submit" class="btn" style="background:#2196f3; color:white;">Save Summary</button>
+            </div>
+        </form>
+    {% else %}
+        <p style="font-size:12px; margin-bottom:20px;">{{ config.executive_summary }}</p>
+    {% endif %}
+
+    <div class="summary-grid">
+        <div class="summary-card">Total Risks<strong>{{ report_summary.total_risks }}</strong></div>
+        <div class="summary-card">Critical<strong>{{ report_summary.critical_risks }}</strong></div>
+        <div class="summary-card">Severe<strong>{{ report_summary.severe_risks }}</strong></div>
+        <div class="summary-card">Overdue<strong>{{ report_summary.overdue_actions }}</strong></div>
+        <div class="summary-card">Escalated<strong>{{ report_summary.escalated_risks }}</strong></div>
+        <div class="summary-card">Open Incidents<strong>{{ report_summary.open_incident_count }}</strong></div>
+        <div class="summary-card">Total Loss<strong>{{ report_summary.total_loss_amount }}</strong></div>
+    </div>
+
+    <div class="quality-grid">
+        {% for warning in report_quality_warnings %}
+            <div class="quality-card">{{ warning.label }}<strong>{{ warning.count }}</strong></div>
+        {% endfor %}
+    </div>
+
+    <table id="riskTable">
+        <thead>
+            <tr>
+                <th class="col-id">ID</th>
+                <th class="col-category">Risk Category</th>
+                <th class="col-desc">Risk Description</th>
+                <th class="col-likelihood">Likelihood</th>
+                <th class="col-impact">Impact</th>
+                <th class="col-rank">Risk Rank</th>
+                <th class="col-trigger">Risk Trigger (Root Cause)</th>
+                <th class="col-controls">Prevention Controls</th>
+                <th class="col-treatment">Action Plan</th>
+                <th class="col-owner">Risk Owner</th>
+                <th class="col-coordinator">Coordinator</th>
+                <th>Control Effectiveness</th>
+                <th>Escalation</th>
+                <th class="col-residual">Residual Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+    {% for dept, dept_risks in grouped_risks.items %}
+        <tr>
+            <td colspan="14" style="font-weight:bold; background:#000; color:#fff; padding:8px;">
+                {{ dept }}
+            </td>
+        </tr>
+
+        {% for risk in dept_risks %}
+        <tr>
+            <td style="font-weight:bold;">{{ risk.reference_id }}</td>
+            <td>{{ risk.area_name }}</td>
+            <td>{{ risk.description }}</td>
+
+            <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability|level_label }}</td>
+            <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact|level_label }}</td>
+            <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating }}</td>
+            <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
+
+            <td>{{ risk.control_description|default:"Standard Controls" }}</td>
+            <td>
+                {{ risk.mitigation_action|default:"Mitigate and monitor" }}<br>
+                <small>Status: {{ risk.action_status }} | Progress: {{ risk.action_progress }}% | Due: {{ risk.action_due_date|default:"-" }}</small>
+            </td>
+            <td>{{ risk.risk_owner }}</td>
+            <td>{{ risk.risk_coordinator_name|default:"-" }}</td>
+            <td>{{ risk.control_effectiveness }}</td>
+            <td>{{ risk.escalation_status }}</td>
+
+
+
+            <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
+        </tr>
+        {% endfor %}
+    {% empty %}
+        <tr><td colspan="14" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
+    {% endfor %}
+</tbody>
+
+    </table>
+
+    <div class="signatures">
+        <div class="sig-block">
+            Chief Risk Officer
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
+        <div class="sig-block">
+            Internal Auditor
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
+        <div class="sig-block">
+            Board Chairman
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const key = "bankRiskTheme";
+            const body = document.body;
+            const toggle = document.getElementById("themeToggle");
+            function applyTheme(theme) {
+                body.classList.toggle("theme-light", theme === "light");
+                if (toggle) {
+                    toggle.textContent = theme === "light" ? "D" : "L";
+                    toggle.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+                }
+            }
+            applyTheme(localStorage.getItem(key) || "light");
+            if (toggle) toggle.addEventListener("click", function () {
+                const nextTheme = body.classList.contains("theme-light") ? "dark" : "light";
+                localStorage.setItem(key, nextTheme);
+                applyTheme(nextTheme);
+            });
+        })();
+    </script>
+</body>
+</html>

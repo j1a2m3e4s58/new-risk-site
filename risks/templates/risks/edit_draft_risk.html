@@ -1,0 +1,96 @@
+{% extends "risks/management_base.html" %}
+
+{% block title %}Edit Draft Risk | Bank Risk System{% endblock %}
+
+{% block content %}
+<section class="hero-panel">
+    <div class="section-eyebrow">Draft Risk Review</div>
+    <h1 class="page-title display-6 mb-2">Refine and approve a draft risk assessment.</h1>
+    <p class="page-subtitle">Use this workspace to tighten wording, confirm ownership, and adjust scoring before the risk becomes part of the approved portfolio.</p>
+</section>
+
+<section class="premium-panel mt-4">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <div class="section-eyebrow">Reference</div>
+            <h2 class="section-title mb-0">{{ risk.reference_id }}</h2>
+        </div>
+        <a href="{% url 'dashboard' %}" class="button-ghost">Back to Dashboard</a>
+    </div>
+
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <div class="row g-4">
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Area Name</label>
+                <input name="area_name" value="{{ risk.area_name }}" class="premium-form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Risk Owner</label>
+                <input name="risk_owner" value="{{ risk.risk_owner }}" class="premium-form-control">
+            </div>
+            <div class="col-12">
+                <label class="helper-text d-block mb-2">Risk Description</label>
+                <textarea name="description" class="premium-form-control" rows="4">{{ risk.description }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Root Cause</label>
+                <textarea name="caused_by" class="premium-form-control" rows="4">{{ risk.caused_by }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Consequences</label>
+                <textarea name="consequences" class="premium-form-control" rows="4">{{ risk.consequences }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Controls</label>
+                <textarea name="controls" class="premium-form-control" rows="4">{{ risk.controls }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="helper-text d-block mb-2">Control Owner</label>
+                <input name="control_owner" value="{{ risk.control_owner }}" class="premium-form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="helper-text d-block mb-2">Inherent Probability</label>
+                <select name="inherent_probability" class="premium-select">
+                    <option value="">Select</option>
+                    {% for v,l in prob_choices %}
+                        <option value="{{ v }}" {% if risk.inherent_probability == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="helper-text d-block mb-2">Inherent Impact</label>
+                <select name="inherent_impact" class="premium-select">
+                    <option value="">Select</option>
+                    {% for v,l in impact_choices %}
+                        <option value="{{ v }}" {% if risk.inherent_impact == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="helper-text d-block mb-2">Residual Probability</label>
+                <select name="residual_probability" class="premium-select">
+                    <option value="">Select</option>
+                    {% for v,l in prob_choices %}
+                        <option value="{{ v }}" {% if risk.residual_probability == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="helper-text d-block mb-2">Residual Impact</label>
+                <select name="residual_impact" class="premium-select">
+                    <option value="">Select</option>
+                    {% for v,l in impact_choices %}
+                        <option value="{{ v }}" {% if risk.residual_impact == v %}selected{% endif %}>{{ l }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="hero-actions mt-4">
+            <button type="submit" class="premium-button">Save Draft</button>
+            <a href="{% url 'dashboard' %}" class="button-ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

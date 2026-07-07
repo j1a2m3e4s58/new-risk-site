@@ -1,0 +1,393 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bank Secure Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --line: rgba(188,207,238,.18);
+            --line-strong: rgba(188,207,238,.28);
+            --text: #edf4ff;
+            --muted: #92a0b4;
+            --blue: #4f8cff;
+            --green: #18a66a;
+            --danger: #ef4056;
+            --glass-shadow: 0 24px 70px rgba(0,0,0,.34);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 12% 8%, rgba(79,140,255,.14), transparent 30%),
+                radial-gradient(circle at 78% 18%, rgba(24,166,106,.10), transparent 28%),
+                linear-gradient(180deg,#03070b 0%,#050a0f 48%,#030608 100%);
+            background-attachment: fixed;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 38px;
+            height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(255,255,255,.045);
+            color: var(--text);
+            font-weight: 900;
+            cursor: pointer;
+            z-index: 3;
+        }
+
+        .login-shell {
+            width: min(880px, 100%);
+            display: grid;
+            grid-template-columns: minmax(260px,.85fr) minmax(320px,1.15fr);
+            border: 1px solid var(--line-strong);
+            border-radius: 8px;
+            background:
+                linear-gradient(135deg, rgba(34,41,58,.58), rgba(10,15,22,.42)),
+                rgba(12,17,25,.34);
+            color: var(--text);
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(128%);
+            -webkit-backdrop-filter: blur(18px) saturate(128%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .login-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(255,255,255,.08), transparent 38%);
+        }
+
+        .login-header,
+        .login-panel {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-header {
+            min-height: 390px;
+            padding: 34px 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 1px solid var(--line);
+            background: rgba(79,140,255,.12);
+        }
+
+        .login-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .login-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            padding: 6px;
+            border: 1px solid var(--line);
+            border-radius: 50%;
+            background: rgba(255,255,255,.74);
+            filter: drop-shadow(0 10px 24px rgba(0,0,0,.22));
+        }
+
+        .login-kicker {
+            margin-bottom: 10px;
+            color: var(--blue);
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            font-size: .72rem;
+            font-weight: 900;
+        }
+
+        .login-title {
+            margin: 0;
+            font-size: 1.55rem;
+            line-height: 1.08;
+            font-weight: 950;
+        }
+
+        .login-subtitle {
+            margin: 18px 0 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .trust-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 28px;
+            color: var(--muted);
+            font-size: .88rem;
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .trust-dot {
+            width: 7px;
+            height: 7px;
+            display: inline-block;
+            background: var(--green);
+        }
+
+        .login-panel {
+            background: transparent;
+        }
+
+        .card-body,
+        .card-footer {
+            background: transparent !important;
+            color: var(--text);
+        }
+
+        .card-body { padding: 38px !important; }
+        .card-footer {
+            padding: 16px 38px !important;
+            border-top: 1px solid var(--line);
+        }
+
+        .form-title {
+            margin-bottom: 4px;
+            font-size: 1.05rem;
+            font-weight: 900;
+        }
+
+        .form-note {
+            margin-bottom: 24px;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        .form-label,
+        .text-muted {
+            color: var(--muted) !important;
+        }
+
+        .form-label {
+            font-weight: 800;
+            font-size: .82rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .form-control {
+            min-height: 48px;
+            padding: 11px 13px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: rgba(7,12,19,.54);
+            color: var(--text);
+        }
+
+        .form-control:focus {
+            background: rgba(7,12,19,.74);
+            color: var(--text);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 .2rem rgba(79,140,255,.18);
+        }
+
+        .btn-primary {
+            min-height: 48px;
+            border-radius: 6px;
+            background: var(--blue);
+            border-color: var(--blue);
+            font-weight: 900;
+            letter-spacing: .02em;
+            box-shadow: 0 14px 28px rgba(31,86,183,.20);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+        }
+
+        .alert-danger {
+            background: rgba(239,64,86,.12);
+            border-color: rgba(239,64,86,.45);
+            color: #ff9ba7;
+            border-radius: 6px;
+        }
+
+        body.theme-light {
+            --line: rgba(9,66,88,.16);
+            --line-strong: rgba(9,66,88,.24);
+            --text: #071a26;
+            --muted: #4f6674;
+            --blue: #1f56b7;
+            --green: #087b5b;
+            --glass-shadow: 0 24px 70px rgba(18,91,117,.18);
+            background:
+                radial-gradient(circle at 12% 10%, rgba(255,255,255,.78), transparent 28%),
+                radial-gradient(circle at 72% 18%, rgba(98,190,216,.32), transparent 30%),
+                linear-gradient(180deg,#d7f3fb 0%,#bee5f2 48%,#d8f1f8 100%);
+            background-attachment: fixed;
+            color: var(--text);
+        }
+
+        body.theme-light .login-shell {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.76), rgba(232,248,253,.50)),
+                rgba(238,250,255,.48);
+            border-color: var(--line-strong);
+            color: var(--text);
+            box-shadow: var(--glass-shadow);
+        }
+
+        body.theme-light .login-header,
+        body.theme-light .theme-toggle {
+            background: rgba(255,255,255,.46);
+            border-color: var(--line);
+            color: var(--text);
+        }
+
+        body.theme-light .form-control {
+            background: rgba(255,255,255,.58);
+            color: var(--text);
+            border-color: var(--line);
+        }
+
+        body.theme-light .form-control:focus {
+            background: rgba(255,255,255,.72);
+            color: var(--text);
+        }
+
+        body.theme-light .form-label,
+        body.theme-light .text-muted {
+            color: var(--muted) !important;
+        }
+
+        @media (max-width: 760px) {
+            body {
+                align-items: flex-start;
+                padding: 70px 16px 24px;
+            }
+
+            .login-shell { grid-template-columns: 1fr; }
+
+            .login-header {
+                min-height: auto;
+                padding: 26px 24px;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .trust-list {
+                grid-template-columns: 1fr;
+                margin-top: 20px;
+            }
+
+            .card-body { padding: 28px 24px !important; }
+            .card-footer { padding: 14px 24px !important; }
+        }
+    </style>
+</head>
+<body>
+<script>
+    (function () {
+        if ((localStorage.getItem("bankRiskTheme") || "light") === "light") {
+            document.body.classList.add("theme-light");
+        }
+    })();
+</script>
+<button type="button" class="theme-toggle" id="themeToggle" title="Switch theme" aria-label="Switch theme">+</button>
+
+<div class="login-shell">
+    <section class="login-header">
+        <div>
+            <div class="login-brand">
+                <img src="{% static 'risks/logo.png' %}" alt="Bank Logo" class="login-logo">
+                <div>
+                    <div class="login-kicker">Secure Access</div>
+                    <h1 class="login-title">Bank Risk System</h1>
+                </div>
+            </div>
+            <p class="login-subtitle">Enterprise risk monitoring, board reporting, incident oversight, and compliance review.</p>
+        </div>
+        <div class="trust-list">
+            <div class="trust-item"><span class="trust-dot"></span> Authorized users only</div>
+            <div class="trust-item"><span class="trust-dot"></span> Risk intelligence workspace</div>
+            <div class="trust-item"><span class="trust-dot"></span> Audit-aware access</div>
+        </div>
+    </section>
+
+    <section class="login-panel">
+        <div class="card-body">
+            <div class="form-title">Sign in to continue</div>
+            <div class="form-note">Use your assigned account to access risk records and reports.</div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                    <div class="alert alert-danger p-2 small">Invalid username or password.</div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label text-muted">Username</label>
+                    <input type="text" name="username" class="form-control" required autofocus>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-muted">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">Secure Login</button>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer text-center">
+            <small class="text-muted">(c) 2026 Bank Risk System</small>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const key = "bankRiskTheme";
+        const body = document.body;
+        const toggle = document.getElementById("themeToggle");
+
+        function applyTheme(theme) {
+            body.classList.toggle("theme-light", theme === "light");
+            if (toggle) {
+                toggle.textContent = theme === "light" ? "D" : "L";
+                toggle.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+            }
+        }
+
+        applyTheme(localStorage.getItem(key) || "light");
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                const nextTheme = body.classList.contains("theme-light") ? "dark" : "light";
+                localStorage.setItem(key, nextTheme);
+                applyTheme(nextTheme);
+            });
+        }
+    })();
+</script>
+</body>
+</html>

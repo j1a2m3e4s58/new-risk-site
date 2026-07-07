@@ -1,0 +1,159 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Bank Risk Management (Secure Admin){% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}" style="font-size: 24px;">Bank Risk Management System</a>
+</h1>
+{% endblock %}
+
+{% block extrastyle %}
+<style>
+    /* 1. HEADER STYLING */
+    body {
+        background:
+            radial-gradient(circle at 12% 10%, rgba(255,255,255,.78), transparent 28%),
+            radial-gradient(circle at 72% 18%, rgba(98,190,216,.32), transparent 30%),
+            linear-gradient(180deg,#d7f3fb 0%,#bee5f2 48%,#d8f1f8 100%) !important;
+        color: #071a26 !important;
+    }
+
+    #header {
+        background: linear-gradient(135deg, rgba(255,255,255,.70), rgba(232,248,253,.46)), rgba(238,250,255,.42) !important;
+        border: 1px solid rgba(9,66,88,.24) !important;
+        box-shadow: 0 24px 70px rgba(18,91,117,.18) !important;
+        padding: 15px 30px !important;
+        height: auto !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* 2. USER TOOLS ( The Top Right Buttons ) */
+    #user-tools {
+        display: flex;
+        gap: 15px; /* Space them out */
+        align-items: center;
+        font-size: 14px !important;
+        letter-spacing: 0.5px;
+    }
+
+    /* 3. MAKE THEM LOOK LIKE BUTTONS */
+    #user-tools a {
+        background-color: rgba(255, 255, 255, 0.42);
+        padding: 8px 15px;
+        border-radius: 0;
+        color: #102d3d !important;
+        text-decoration: none;
+        transition: background 0.3s ease;
+        text-transform: uppercase;
+        font-weight: bold;
+        border: 1px solid rgba(9,66,88,.16);
+    }
+
+    #user-tools a:hover {
+        background-color: rgba(31,86,183,.14);
+        border-color: rgba(31,86,183,.24);
+    }
+
+    /* Highlight the Username (Welcome, Admin) */
+    #user-tools strong {
+        color: #1f56b7 !important;
+        margin-right: 10px;
+        font-size: 1.1em;
+    }
+
+    /* ---------------------------------------------------- */
+    /* EXISTING STYLES (Keep the rest of your large fonts) */
+    /* ---------------------------------------------------- */
+    
+    /* FORCE GIANT FONTS EVERYWHERE */
+    body, p, div, span, a, li, td, th {
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+    }
+
+    #content,
+    .module,
+    .grp-module,
+    #changelist,
+    .results,
+    .form-row,
+    .submit-row,
+    .breadcrumbs {
+        background: rgba(255,255,255,.46) !important;
+        color: #071a26 !important;
+        border-color: rgba(9,66,88,.16) !important;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+        background-color: transparent !important;
+        color: #071a26 !important;
+        border-color: rgba(9,66,88,.16) !important;
+    }
+    
+    /* Make Inputs and Dropdowns Huge */
+    input[type=text], input[type=password], select, textarea, .vTextField {
+        font-size: 16px !important;
+        padding: 10px !important;
+        border-radius: 0 !important;
+        border: 1px solid rgba(9,66,88,.16) !important;
+        background: rgba(255,255,255,.58) !important;
+        color: #071a26 !important;
+    }
+    
+    /* Make Dropdowns wider */
+    select { min-width: 250px !important; }
+
+    /* Make Labels (Field Names) Bold and Large */
+    .aligned label {
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        color: #071a26 !important;
+        width: 200px !important;
+        padding-top: 10px !important;
+    }
+
+    /* Make Section Headers (Blue Bars) Massive */
+    fieldset.module h2 {
+        font-size: 20px !important;
+        padding: 12px !important;
+        background: #1f56b7 !important;
+        color: white !important;
+    }
+
+    /* Make the SAVE Buttons Giant */
+    .submit-row input {
+        font-size: 18px !important;
+        padding: 12px 30px !important;
+        background: #d32f2f !important; /* Red */
+        font-weight: bold !important;
+        text-transform: uppercase !important;
+        color: white !important;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .submit-row input:hover { background: #b71c1c !important; }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Find the specific link that says "View site"
+        var links = document.querySelectorAll('#user-tools a');
+        links.forEach(function(link) {
+            if (link.textContent.trim().toLowerCase() === 'view site') {
+                link.textContent = 'RESULT 📊'; // Change text to RESULT
+                link.style.backgroundColor = '#4caf50'; // Make this button Green
+                link.style.borderColor = '#4caf50';
+            }
+        });
+    });
+</script>
+{% endblock %}

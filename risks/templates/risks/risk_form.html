@@ -1,0 +1,100 @@
+{% extends "risks/management_base.html" %}
+{% block title %}{{ title }} | Bank Risk System{% endblock %}
+{% block module_name %}Risk Form{% endblock %}
+{% block extra_head %}
+<style>
+    .risk-form-shell { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:18px; align-items:start; }
+    .form-section { border:1px solid var(--line); background:rgba(255,255,255,.035); padding:18px; margin-bottom:16px; }
+    .form-section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .form-section-title h2 { margin:0; font-size:1rem; }
+    .section-count { color:var(--muted); font-size:.78rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    .form-field.required label::after { content:" *"; color:var(--danger); }
+    .field-help { color:var(--muted); font-size:.78rem; margin-top:5px; }
+    .form-aside { position:sticky; top:18px; }
+    .check-list { display:grid; gap:10px; margin-top:12px; }
+    .check-item { border:1px solid var(--line); background:rgba(255,255,255,.04); padding:10px; font-size:.86rem; color:var(--muted); }
+    body.theme-light .form-section,
+    body.theme-light .check-item { background:rgba(255,255,255,.46); border-color:var(--line); }
+    @media (max-width:980px) { .risk-form-shell { grid-template-columns:1fr; } .form-aside { position:static; } }
+</style>
+{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="eyebrow">Risk Register</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Capture a complete risk record in clear sections: identity, scoring, controls, treatment, and workflow status.</p>
+</section>
+<form method="post" class="risk-form-shell">
+    {% csrf_token %}
+    <div>
+        <section class="panel form-section">
+            <div class="form-section-title"><h2>1. Risk Identity</h2><span class="section-count">Owner and context</span></div>
+            <div class="form-grid">
+                <div class="form-field required"><label for="{{ form.reference_id.id_for_label }}">{{ form.reference_id.label }}</label>{{ form.reference_id }}{% for error in form.reference_id.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required"><label for="{{ form.area_name.id_for_label }}">{{ form.area_name.label }}</label>{{ form.area_name }}{% for error in form.area_name.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required full"><label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>{{ form.description }}<div class="field-help">Use a clear risk event statement that management can understand quickly.</div>{% for error in form.description.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field full"><label for="{{ form.caused_by.id_for_label }}">{{ form.caused_by.label }}</label>{{ form.caused_by }}{% for error in form.caused_by.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field full"><label for="{{ form.consequences.id_for_label }}">{{ form.consequences.label }}</label>{{ form.consequences }}{% for error in form.consequences.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required"><label for="{{ form.risk_owner.id_for_label }}">{{ form.risk_owner.label }}</label>{{ form.risk_owner }}{% for error in form.risk_owner.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.risk_coordinator_name.id_for_label }}">{{ form.risk_coordinator_name.label }}</label>{{ form.risk_coordinator_name }}{% for error in form.risk_coordinator_name.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+            </div>
+        </section>
+
+        <section class="panel form-section">
+            <div class="form-section-title"><h2>2. Risk Scoring</h2><span class="section-count">Before and after controls</span></div>
+            <div class="form-grid">
+                <div class="form-field required"><label for="{{ form.inherent_probability.id_for_label }}">{{ form.inherent_probability.label }}</label>{{ form.inherent_probability }}{% for error in form.inherent_probability.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required"><label for="{{ form.inherent_impact.id_for_label }}">{{ form.inherent_impact.label }}</label>{{ form.inherent_impact }}{% for error in form.inherent_impact.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required"><label for="{{ form.residual_probability.id_for_label }}">{{ form.residual_probability.label }}</label>{{ form.residual_probability }}{% for error in form.residual_probability.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field required"><label for="{{ form.residual_impact.id_for_label }}">{{ form.residual_impact.label }}</label>{{ form.residual_impact }}{% for error in form.residual_impact.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+            </div>
+        </section>
+
+        <section class="panel form-section">
+            <div class="form-section-title"><h2>3. Controls</h2><span class="section-count">Design and effectiveness</span></div>
+            <div class="form-grid">
+                <div class="form-field full"><label for="{{ form.controls.id_for_label }}">{{ form.controls.label }}</label>{{ form.controls }}{% for error in form.controls.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.control_owner.id_for_label }}">{{ form.control_owner.label }}</label>{{ form.control_owner }}{% for error in form.control_owner.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.control_effectiveness.id_for_label }}">{{ form.control_effectiveness.label }}</label>{{ form.control_effectiveness }}{% for error in form.control_effectiveness.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field full"><label for="{{ form.control_effectiveness_rationale.id_for_label }}">{{ form.control_effectiveness_rationale.label }}</label>{{ form.control_effectiveness_rationale }}{% for error in form.control_effectiveness_rationale.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+            </div>
+        </section>
+
+        <section class="panel form-section">
+            <div class="form-section-title"><h2>4. Action Plan</h2><span class="section-count">Treatment and due date</span></div>
+            <div class="form-grid">
+                <div class="form-field full"><label for="{{ form.mitigation_action.id_for_label }}">{{ form.mitigation_action.label }}</label>{{ form.mitigation_action }}{% for error in form.mitigation_action.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.action_responsible_officer.id_for_label }}">{{ form.action_responsible_officer.label }}</label>{{ form.action_responsible_officer }}{% for error in form.action_responsible_officer.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.action_responsible_email.id_for_label }}">{{ form.action_responsible_email.label }}</label>{{ form.action_responsible_email }}{% for error in form.action_responsible_email.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.action_due_date.id_for_label }}">{{ form.action_due_date.label }}</label>{{ form.action_due_date }}{% for error in form.action_due_date.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.action_status.id_for_label }}">{{ form.action_status.label }}</label>{{ form.action_status }}{% for error in form.action_status.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field"><label for="{{ form.action_progress.id_for_label }}">{{ form.action_progress.label }}</label>{{ form.action_progress }}{% for error in form.action_progress.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+                <div class="form-field full"><label for="{{ form.action_last_update.id_for_label }}">{{ form.action_last_update.label }}</label>{{ form.action_last_update }}{% for error in form.action_last_update.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+            </div>
+        </section>
+
+        <section class="panel form-section">
+            <div class="form-section-title"><h2>5. Workflow</h2><span class="section-count">Review status</span></div>
+            <div class="form-grid">
+                <div class="form-field"><label for="{{ form.workflow_status.id_for_label }}">{{ form.workflow_status.label }}</label>{{ form.workflow_status }}{% for error in form.workflow_status.errors %}<div class="small text-danger mt-1">{{ error }}</div>{% endfor %}</div>
+            </div>
+        </section>
+    </div>
+
+    <aside class="panel form-aside">
+        <div class="eyebrow">Quality Checklist</div>
+        <h2>Before saving</h2>
+        <div class="check-list">
+            <div class="check-item">Describe the risk, cause, and consequence in plain management language.</div>
+            <div class="check-item">Assign a risk owner and, where possible, a coordinator.</div>
+            <div class="check-item">Record controls and explain weak or moderate control effectiveness.</div>
+            <div class="check-item">Add an action owner, due date, status, and progress for open actions.</div>
+            <div class="check-item">Use Draft for staff submissions and Reviewed or Approved for governance review.</div>
+        </div>
+        <div class="actions mt-4">
+            <button class="btn-primaryx" type="submit">Save Risk</button>
+            {% if risk %}<a class="btnx" href="{% url 'risk-detail' risk.id %}">Cancel</a>{% else %}<a class="btnx" href="{% url 'dashboard' %}">Cancel</a>{% endif %}
+        </div>
+    </aside>
+</form>
+{% endblock %}

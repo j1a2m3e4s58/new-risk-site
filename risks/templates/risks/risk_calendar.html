@@ -1,0 +1,11 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Risk Calendar | Bank Risk System{% endblock %}
+{% block module_name %}Risk Calendar{% endblock %}
+{% block content %}
+<section class="hero"><div class="eyebrow">Risk Calendar</div><h1>Due dates, incidents, and board reporting</h1><p class="muted">Track action deadlines, overdue items, incident dates, and reporting checkpoints.</p></section>
+<section class="grid-2">
+    <article class="panel"><div class="eyebrow">Action Due Dates</div>{% for risk in risks %}<p><strong>{{ risk.action_due_date }}</strong> - <a href="{% url 'risk-detail' risk.id %}">{{ risk.reference_id }}</a> {{ risk.area_name|default:"Unspecified" }} {% if risk.is_action_overdue %}<span class="badge-soft">Overdue {{ risk.days_overdue }} day(s)</span>{% endif %}</p>{% empty %}<p class="muted">No action due dates.</p>{% endfor %}</article>
+    <article class="panel"><div class="eyebrow">Incident / Loss Trend</div>{% for incident in incidents %}<p><strong>{{ incident.incident_date }}</strong> - {{ incident.title }} | {{ incident.status }} | Loss: {{ incident.loss_amount }}</p>{% empty %}<p class="muted">No incidents recorded.</p>{% endfor %}</article>
+</section>
+<section class="panel"><div class="eyebrow">Board Deadlines</div>{% for item in board_deadlines %}<p><strong>{{ item.date }}</strong> - {{ item.title }}</p>{% endfor %}</section>
+{% endblock %}

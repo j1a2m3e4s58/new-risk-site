@@ -1,0 +1,17 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Delete {{ risk.reference_id }} | Bank Risk System{% endblock %}
+{% block module_name %}Protected Delete{% endblock %}
+{% block content %}
+<section class="hero"><div class="eyebrow">Protected Delete</div><h1>Delete {{ risk.reference_id }} only</h1><p class="muted">This deletes this one risk. Other departments and risks stay intact.</p></section>
+<section class="panel">
+    <p><strong>{{ risk.reference_id }}</strong> - {{ risk.description }}</p>
+    <form method="post">
+        {% csrf_token %}
+        <label>Reason for deletion</label>
+        <input name="delete_reason" required>
+        <label class="mt-3">Type DELETE to confirm</label>
+        <input name="confirm_text" required>
+        <div class="actions mt-4"><button class="btn-dangerx" type="submit">Delete This Risk</button><a class="btnx" href="{% url 'risk-detail' risk.id %}">Cancel</a></div>
+    </form>
+</section>
+{% endblock %}

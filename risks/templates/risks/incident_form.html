@@ -1,0 +1,20 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Add Incident | Bank Risk System{% endblock %}
+{% block module_name %}Incident Register{% endblock %}
+{% block content %}
+<section class="hero"><div class="eyebrow">Incident Register</div><h1>Add Incident</h1><p class="muted">Record losses, root causes, actions taken, and incident status.</p></section>
+<section class="panel">
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="form-field {% if field.name in 'description root_cause action_taken' %}full{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="actions mt-4"><button class="btn-primaryx" type="submit">Save Incident</button><a class="btnx" href="{% url 'dashboard' %}">Cancel</a></div>
+    </form>
+</section>
+{% endblock %}

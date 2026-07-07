@@ -1,0 +1,17 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Audit Log | Bank Risk System{% endblock %}
+{% block module_name %}Audit Log{% endblock %}
+{% block content %}
+<section class="hero"><div class="eyebrow">Audit Trail</div><h1>System activity log</h1><p class="muted">A front-end view of create, update, approve, export, delete, and other sensitive actions.</p></section>
+<section class="panel">
+    <form method="get" class="actions mb-3">
+        <input name="q" value="{{ query_text }}" placeholder="Search user, reference, department, summary">
+        <select name="action"><option value="">All actions</option>{% for value,label in action_choices %}<option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <button class="btn-primaryx" type="submit">Filter</button>
+        <a class="btnx" href="{% url 'audit-log' %}">Reset</a>
+    </form>
+    <table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Reference</th><th>Department</th><th>Summary</th></tr></thead><tbody>
+    {% for log in logs %}<tr><td>{{ log.created_at|date:"Y-m-d H:i" }}</td><td>{{ log.user.username|default:"System" }}</td><td>{{ log.get_action_display }}</td><td>{{ log.reference_id|default:"-" }}</td><td>{{ log.area_name|default:"-" }}</td><td>{{ log.summary }}</td></tr>{% empty %}<tr><td colspan="6">No audit logs.</td></tr>{% endfor %}
+    </tbody></table>
+</section>
+{% endblock %}

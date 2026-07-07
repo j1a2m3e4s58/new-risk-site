@@ -1,0 +1,66 @@
+===================================================================
+BANK RISK MANAGEMENT SYSTEM - ENTERPRISE EDITION v2.0
+User Manual & Installation Guide
+===================================================================
+
+1. SYSTEM OVERVIEW
+-------------------------------------------------------------------
+This software is a secure, self-hosted Risk Management Solution designed 
+specifically for banking environments. It features:
+   - Real-time 5x5 Risk Heatmap (Inherent vs. Residual).
+   - Role-based Access Control.
+   - Audit Trails (Tracking creation and updates).
+   - CSV Data Export for Board Reporting.
+   - Secure "Glassmorphism" Interface.
+
+2. INSTALLATION INSTRUCTIONS
+-------------------------------------------------------------------
+Prerequisites: Python 3.9 or higher installed on the server.
+
+Step A: Unzip the application folder.
+Step B: Open a terminal/command prompt in the folder.
+Step C: Install dependencies:
+    pip install -r requirements.txt
+
+Step D: Initialize the secure database:
+    python manage.py migrate
+
+Step E: Start the secure server:
+    python manage.py runserver
+
+3. LOGIN CREDENTIALS
+-------------------------------------------------------------------
+The system comes pre-configured with a Super Admin account.
+
+   URL:      http://127.0.0.1:8000/accounts/login/
+   Username: Admin
+   Password: [T4N4AMEG8F5]
+
+4. HOW TO USE
+-------------------------------------------------------------------
+A. DASHBOARD:
+   Navigate to the home page to view the 3 interactive matrices.
+   - Matrix 1: Legend (Color Guide)
+   - Matrix 2: Inherent Risk (Raw exposure)
+   - Matrix 3: Residual Risk (After controls)
+
+B. ADDING RISKS:
+   1. Click "Manage Data" or go to the Admin Panel.
+   2. Click "Risk Assessments" -> "Add Risk".
+   3. Fill in the "Root Cause" and "Consequences".
+   4. The system automatically calculates the Risk Rating (Red/Amber/Green).
+
+C. EXPORTING REPORTS:
+   On the Dashboard, click the "Export CSV" button to download 
+   a full register compatible with Excel.
+
+5. SECURITY NOTES
+-------------------------------------------------------------------
+- The system automatically logs users out after 15 minutes of inactivity.
+- Debug mode is disabled for production security.
+- All password hashes are encrypted using PBKDF2.
+
+===================================================================
+Developed by: [JAMES LINCOLN AWUAH]
+Support Contact: [YOUR EMAIL]
+===================================================================

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Risk Intelligence AI | Bank Risk System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --page: #03070b;
+            --panel: rgba(19, 24, 35, 0.58);
+            --panel-2: rgba(25, 31, 44, 0.46);
+            --line: rgba(188, 207, 238, 0.17);
+            --line-strong: rgba(188, 207, 238, 0.28);
+            --text: #edf4ff;
+            --muted: #92a0b4;
+            --blue: #4f8cff;
+            --green: #18a66a;
+            --danger: #ef4056;
+            --gold: #f5b72e;
+            --glass-shadow: 0 24px 70px rgba(0,0,0,0.34);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 12% 8%, rgba(79,140,255,0.14), transparent 30%), radial-gradient(circle at 78% 18%, rgba(24,166,106,0.10), transparent 28%), linear-gradient(180deg,#03070b 0%,#050a0f 48%,#030608 100%);
+            background-attachment: fixed;
+            color: var(--text);
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .official-nav {
+            margin: 12px 16px;
+            padding: 10px 14px;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(19,23,34,0.72), rgba(11,15,22,0.56));
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(130%);
+            -webkit-backdrop-filter: blur(18px) saturate(130%);
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(255,255,255,0.45);
+        }
+
+        .brand-title { font-weight: 900; line-height: 1.1; font-size: 0.98rem; }
+        .brand-subtitle { color: var(--muted); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+        .nav-menu {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .nav-menu a {
+            color: #dbe6f7;
+            padding: 8px 11px;
+            border: 1px solid transparent;
+            font-weight: 800;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .nav-menu a.active,
+        .nav-menu a:hover {
+            color: #fff;
+            background: rgba(79,140,255,0.18);
+            border-color: rgba(79,140,255,0.25);
+        }
+
+        .user-zone {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .user-chip {
+            border: 1px solid var(--line);
+            background: rgba(9, 14, 22, 0.48);
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--blue), var(--green));
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .btn-nav,
+        .btn-ai {
+            border: 1px solid var(--line);
+            color: var(--text);
+            background: rgba(255,255,255,0.045);
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .btn-nav:hover,
+        .btn-ai:hover { border-color: var(--blue); background: rgba(79,140,255,0.14); color: #fff; }
+
+        .btn-primary-ai { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+        .workspace {
+            width: min(1320px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 8px 0 38px;
+        }
+
+        .ai-hero,
+        .ai-card {
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(34,41,58,0.58), rgba(10,15,22,0.42)), rgba(12,17,25,0.34);
+            color: var(--text);
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(128%);
+            -webkit-backdrop-filter: blur(18px) saturate(128%);
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-hero::before,
+        .ai-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(255,255,255,0.075), transparent 36%);
+        }
+        .ai-hero > *,
+        .ai-card > * { position: relative; z-index: 1; }
+
+        .ai-hero {
+            padding: 30px;
+            margin-bottom: 22px;
+        }
+
+        .eyebrow {
+            color: var(--blue);
+            font-size: 0.76rem;
+            letter-spacing: 0.34em;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .hero-title {
+            font-size: clamp(2.1rem, 4vw, 3.55rem);
+            line-height: 1.04;
+            font-weight: 950;
+            margin: 12px 0 10px;
+        }
+
+        .hero-copy {
+            color: var(--muted);
+            max-width: 880px;
+            line-height: 1.65;
+            margin: 0;
+        }
+
+        .stat-chip {
+            border: 1px solid rgba(79,140,255,0.34);
+            background: rgba(79,140,255,0.1);
+            padding: 10px 12px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .ai-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.65fr);
+            gap: 22px;
+            margin-bottom: 22px;
+        }
+
+        .ai-card { padding: 22px; }
+
+        .section-title {
+            margin: 8px 0;
+            font-size: 1.28rem;
+            font-weight: 900;
+        }
+
+        .section-subtitle,
+        .muted,
+        .stat-label {
+            color: var(--muted);
+        }
+
+        .ai-input {
+            width: 100%;
+            min-height: 230px;
+            resize: vertical;
+            border: 1px solid var(--line);
+            background: rgba(7,12,19,0.54);
+            color: var(--text);
+            padding: 16px;
+            line-height: 1.6;
+            margin-top: 14px;
+        }
+
+        .ai-input:focus {
+            outline: 2px solid rgba(79,140,255,0.36);
+            border-color: var(--blue);
+        }
+
+        .actions,
+        .badge-row,
+        .source-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .suggestion-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .suggestion-grid form,
+        .suggestion-grid button {
+            width: 100%;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .stat-box {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            padding: 15px;
+            min-height: 88px;
+        }
+
+        .stat-box strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 1.75rem;
+            line-height: 1;
+        }
+
+        .badge-soft {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            color: #dbe6f7;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            font-weight: 800;
+        }
+
+        .answer-box {
+            background: rgba(7,12,19,0.54);
+            border: 1px solid rgba(79,140,255,0.34);
+            padding: 22px;
+            line-height: 1.7;
+            min-height: 150px;
+        }
+
+        .alert-error {
+            border: 1px solid rgba(239,64,86,0.5);
+            background: rgba(239,64,86,0.1);
+            color: #ff9ba7;
+            padding: 12px;
+            margin-bottom: 14px;
+            font-weight: 800;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 22px;
+            margin-top: 22px;
+        }
+
+        .watch-list {
+            list-style: none;
+            padding: 0;
+            margin: 14px 0 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .watch-item {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.045);
+            padding: 14px;
+        }
+
+        .risk-pill {
+            display: inline-flex;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.04);
+            padding: 5px 8px;
+            font-size: 0.78rem;
+            font-weight: 900;
+            color: #ffd36a;
+        }
+        .theme-toggle { width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0; }
+        body.theme-light {
+            --page: #caecf8;
+            --panel: rgba(245,253,255,0.68);
+            --panel-2: rgba(237,249,254,0.56);
+            --line: rgba(9,66,88,0.16);
+            --line-strong: rgba(9,66,88,0.24);
+            --text: #071a26;
+            --muted: #4f6674;
+            --blue: #1f56b7;
+            --green: #087b5b;
+            --danger: #e12d48;
+            --gold: #c98a00;
+            --glass-shadow: 0 24px 70px rgba(18,91,117,0.18);
+            background: radial-gradient(circle at 12% 10%, rgba(255,255,255,0.78), transparent 28%), radial-gradient(circle at 72% 18%, rgba(98,190,216,0.32), transparent 30%), linear-gradient(180deg,#d7f3fb 0%,#bee5f2 48%,#d8f1f8 100%);
+            background-attachment: fixed;
+            color: var(--text);
+        }
+        body.theme-light .official-nav,
+        body.theme-light .ai-hero,
+        body.theme-light .ai-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.70), rgba(232,248,253,0.46)), rgba(238,250,255,0.42);
+            border-color: var(--line-strong);
+            box-shadow: var(--glass-shadow);
+        }
+        body.theme-light .ai-hero::before,
+        body.theme-light .ai-card::before { background: linear-gradient(135deg, rgba(255,255,255,0.72), transparent 42%); opacity: 0.9; }
+        body.theme-light .brand-title,
+        body.theme-light .hero-title,
+        body.theme-light .section-title,
+        body.theme-light .fw-bold,
+        body.theme-light strong { color: var(--text); }
+        body.theme-light .nav-menu a,
+        body.theme-light .btn-nav,
+        body.theme-light .btn-ai { color: #112936; }
+        body.theme-light .nav-menu a.active,
+        body.theme-light .nav-menu a:hover,
+        body.theme-light .btn-nav:hover,
+        body.theme-light .btn-ai:hover { color: #0a2a62; background: rgba(31,86,183,0.14); border-color: rgba(31,86,183,0.24); }
+        body.theme-light .user-chip,
+        body.theme-light .stat-chip,
+        body.theme-light .stat-box,
+        body.theme-light .badge-soft,
+        body.theme-light .watch-item,
+        body.theme-light .risk-pill { background: rgba(255,255,255,0.46); border-color: var(--line); color: var(--text); }
+        body.theme-light .brand-logo { background: rgba(255,255,255,0.78); border-color: rgba(9,66,88,0.18); }
+        body.theme-light .avatar { background: #a9c6f0; color: #082344; }
+        body.theme-light .ai-input,
+        body.theme-light .answer-box { background: rgba(255,255,255,0.58); color: var(--text); border-color: var(--line); }
+        body.theme-light .section-subtitle,
+        body.theme-light .muted,
+        body.theme-light .stat-label,
+        body.theme-light .brand-subtitle { color: var(--muted) !important; }
+
+        @media (max-width: 980px) {
+            .official-nav { grid-template-columns: 1fr; }
+            .nav-menu { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; }
+            .user-zone { justify-content: flex-start; }
+            .ai-grid,
+            .panel-grid,
+            .suggestion-grid,
+            .stat-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        (function () {
+            if ((localStorage.getItem("bankRiskTheme") || "light") === "light") {
+                document.body.classList.add("theme-light");
+            }
+        })();
+    </script>
+    <nav class="official-nav">
+        <div class="brand-wrap">
+            <img src="/static/risks/logo.png" class="brand-logo" alt="Bank logo">
+            <div>
+                <div class="brand-title">Bank Risk System</div>
+                <div class="brand-subtitle">Risk Intelligence AI</div>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <a href="{% url 'dashboard' %}"><i class="fas fa-grid-2 me-2"></i>Dashboard</a>
+            <a href="{% url 'ai-extract' %}"><i class="fas fa-wand-magic-sparkles me-2"></i>AI Intake</a>
+            <a href="{% url 'board-explanation' %}"><i class="fas fa-landmark me-2"></i>Board Brief</a>
+            <a href="{% url 'official_report' %}"><i class="fas fa-file-signature me-2"></i>Official Report</a>
+            {% if request.user.is_staff %}<a href="/admin/"><i class="fas fa-shield-halved me-2"></i>Admin</a>{% endif %}
+        </div>
+        <div class="user-zone">
+            <div class="user-chip">
+                <div class="avatar">{{ request.user.username|slice:":1"|upper }}</div>
+                <div>
+                    <div class="small muted">Signed in</div>
+                    <div class="fw-bold">{{ request.user.username|title }}</div>
+                </div>
+            </div>
+            <button type="button" class="btn-nav theme-toggle" id="themeToggle" title="Switch theme" aria-label="Switch theme"><i class="fas fa-sun"></i></button>
+            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button class="btn-nav" type="submit">Log Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <main class="workspace">
+        <section class="ai-hero">
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                <div>
+                    <div class="eyebrow">Risk Intelligence AI</div>
+                    <h1 class="hero-title">Ask the system. Understand the risks.</h1>
+                    <p class="hero-copy">This AI reads the local risk register, incidents, audit activity, action plans, owners, departments, and report settings. When live AI is enabled, it can also use internet research for external context.</p>
+                </div>
+                <div class="stat-chip">System awareness: {{ snapshot.total_risks }} risks</div>
+            </div>
+        </section>
+
+        <section class="ai-grid">
+            <article class="ai-card">
+                <div class="eyebrow">Ask A Question</div>
+                <h2 class="section-title">Risk and internet intelligence</h2>
+                <p class="section-subtitle">Ask about high risks, overdue actions, weak controls, incidents, owners, reports, or banking risk practices.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <textarea class="ai-input" name="question" placeholder="Example: Explain the highest risks and use internet context to suggest practical controls.">{{ question }}</textarea>
+                    <div class="actions mt-3">
+                        <button type="submit" class="btn-ai btn-primary-ai">Ask Risk AI</button>
+                        <a href="{% url 'dashboard' %}" class="btn-ai">Back to Dashboard</a>
+                    </div>
+                </form>
+
+                <div class="suggestion-grid">
+                    {% for suggestion in suggested_questions %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="question" value="{{ suggestion }}">
+                            <button type="submit" class="btn-ai">{{ suggestion }}</button>
+                        </form>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <aside class="ai-card">
+                <div class="eyebrow">System Snapshot</div>
+                <h2 class="section-title">What the AI can see</h2>
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-label">Total risks</div><strong>{{ snapshot.total_risks }}</strong></div>
+                    <div class="stat-box"><div class="stat-label">Critical residual</div><strong>{{ snapshot.critical_risks }}</strong></div>
+                    <div class="stat-box"><div class="stat-label">Draft pending</div><strong>{{ snapshot.draft_risks }}</strong></div>
+                    <div class="stat-box"><div class="stat-label">Departments</div><strong>{{ snapshot.departments|length }}</strong></div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="ai-card">
+            <div class="eyebrow">AI Response</div>
+            <h2 class="section-title">{% if question %}Answer to: {{ question }}{% else %}Portfolio briefing{% endif %}</h2>
+            <div class="badge-row mb-3">
+                <span class="badge-soft">Mode: {% if assistant_meta.used_live_llm %}Live AI{% else %}Grounded Fallback{% endif %}</span>
+                <span class="badge-soft">Provider: {{ assistant_meta.provider }}</span>
+                <span class="badge-soft">Model: {{ assistant_meta.model_name }}</span>
+                <span class="badge-soft">Internet: {% if assistant_meta.used_live_llm %}Requested{% else %}Unavailable in fallback{% endif %}</span>
+                <span class="badge-soft">Latency: {{ assistant_meta.response_ms }} ms</span>
+            </div>
+            {% if assistant_meta.error_message %}
+                <div class="alert-error">{{ assistant_meta.error_message }}</div>
+            {% endif %}
+            <div class="answer-box">{{ answer|linebreaksbr }}</div>
+        </section>
+
+        {% if assistant_meta.citations %}
+        <section class="ai-card mt-4">
+            <div class="eyebrow">Grounding</div>
+            <h2 class="section-title">Records and sources used</h2>
+            <div class="source-row">
+                {% for citation in assistant_meta.citations %}
+                    {% if citation.type == "web" %}
+                        <a class="badge-soft" href="{{ citation.url }}" target="_blank">{{ citation.title|default:"Web source" }}</a>
+                    {% else %}
+                        <span class="badge-soft">{{ citation.reference_id }}{% if citation.area_name %} | {{ citation.area_name }}{% endif %}</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="panel-grid">
+            <article class="ai-card">
+                <div class="eyebrow">Priority Watchlist</div>
+                <h2 class="section-title">Top residual risks</h2>
+                <ul class="watch-list">
+                    {% for risk in snapshot.top_residual_risks %}
+                        <li class="watch-item">
+                            <div class="d-flex justify-content-between gap-3 flex-wrap">
+                                <div>
+                                    <strong>{{ risk.reference_id }} - {{ risk.description }}</strong>
+                                    <div class="muted mt-2">{{ risk.area_name|default:"Unassigned" }} | Owner: {{ risk.risk_owner }}</div>
+                                </div>
+                                <span class="risk-pill">{{ risk.residual_rating }}</span>
+                            </div>
+                        </li>
+                    {% empty %}
+                        <li class="watch-item muted">No risk records available yet.</li>
+                    {% endfor %}
+                </ul>
+            </article>
+
+            <article class="ai-card">
+                <div class="eyebrow">Detected Themes</div>
+                <h2 class="section-title">Compliance focus areas</h2>
+                <div class="source-row mt-3">
+                    {% for theme, count in snapshot.top_themes %}
+                        <span class="badge-soft">{{ theme }} ({{ count }})</span>
+                    {% empty %}
+                        <span class="muted">No risk themes detected yet.</span>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </main>
+    <script>
+        (function () {
+            const key = "bankRiskTheme";
+            const body = document.body;
+            const toggle = document.getElementById("themeToggle");
+            const icon = toggle ? toggle.querySelector("i") : null;
+            function applyTheme(theme) {
+                body.classList.toggle("theme-light", theme === "light");
+                if (icon) icon.className = theme === "light" ? "fas fa-moon" : "fas fa-sun";
+                if (toggle) {
+                    toggle.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+                    toggle.setAttribute("aria-label", toggle.title);
+                }
+            }
+            applyTheme(localStorage.getItem(key) || "light");
+            if (toggle) {
+                toggle.addEventListener("click", function () {
+                    const nextTheme = body.classList.contains("theme-light") ? "dark" : "light";
+                    localStorage.setItem(key, nextTheme);
+                    applyTheme(nextTheme);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+/* FORCE BIGGER FONTS EVERYWHERE */
+body, td, th, div, span, p, a, li {
+    font-size: 18px !important; /* Increased from 16px */
+}
+
+/* Make Input fields (Text boxes) HUGE */
+input[type=text], input[type=password], input[type=email], select, textarea, .vTextField {
+    font-size: 18px !important;
+    padding: 12px !important;
+    height: auto !important;
+    border: 2px solid #ccc !important;
+    border-radius: 5px !important;
+}
+
+/* Make Dropdowns (Select boxes) Taller */
+select {
+    padding: 10px !important;
+    min-width: 200px !important;
+}
+
+/* Make the Labels (e.g., "Risk Description") massive and bold */
+.aligned label {
+    font-size: 18px !important;
+    font-weight: 900 !important; /* Extra Bold */
+    color: #333 !important;
+    padding-top: 10px !important;
+    width: 250px !important; /* Give labels more room */
+}
+
+/* Make the Section Headers (Blue Bars) larger */
+fieldset.module h2 {
+    font-size: 22px !important;
+    padding: 15px !important;
+    background: #1a237e !important; /* Match your dashboard blue */
+    color: white !important;
+}
+
+/* Make the SAVE Buttons giant */
+input[type=submit], .submit-row input {
+    font-size: 18px !important;
+    padding: 15px 30px !important;
+    background: #d32f2f !important; /* Red button */
+    color: white !important;
+    text-transform: uppercase !important;
+    font-weight: bold !important;
+}
+
+/* Increase spacing between rows so it doesn't feel cramped */
+.form-row {
+    padding: 20px 10px !important;
+    border-bottom: 1px solid #eee !important;
+}

@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Bank Risk & Compliance Platform{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'risks/premium.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="premium-body {% block body_class %}{% endblock %}">
+    {% block app_shell %}
+    <div class="premium-shell">
+        <header class="premium-topbar">
+            <div class="topbar-main">
+                <button class="icon-button nav-toggle" type="button" aria-label="Toggle navigation" data-nav-toggle>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="brand-mark">BR</div>
+                <div class="brand-copy">
+                    <div class="brand-eyebrow">Bank Risk & Compliance</div>
+                    <div class="brand-title fs-3">Executive Control Center</div>
+                    <div class="brand-subtitle">Enterprise dashboard for risk oversight, compliance review, and board reporting.</div>
+                </div>
+            </div>
+
+            {% if request.user.is_authenticated %}
+            <div class="topbar-tools">
+                <div class="user-badge">{{ request.user.username|title }}</div>
+            </div>
+            {% endif %}
+        </header>
+
+        {% if request.user.is_authenticated %}
+        <aside class="side-nav" data-side-nav>
+            <nav class="side-nav-links">
+                <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+                <a href="{% url 'ai-extract' %}" class="{% if request.resolver_match.url_name == 'ai-extract' %}is-active{% endif %}">AI Intake</a>
+                <a href="{% url 'board-explanation' %}" class="{% if request.resolver_match.url_name == 'board-explanation' %}is-active{% endif %}">Board Brief</a>
+                {% if request.user.is_staff %}
+                <a href="{% url 'official_report' %}">Official Report</a>
+                <a href="/admin/">Administration</a>
+                {% endif %}
+            </nav>
+            <form action="{% url 'logout' %}" method="post" class="side-nav-footer">
+                {% csrf_token %}
+                <button type="submit" class="button-ghost w-100">Log Out</button>
+            </form>
+        </aside>
+        <div class="nav-backdrop" data-nav-backdrop></div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+    {% endblock %}
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const nav = document.querySelector("[data-side-nav]");
+            const navToggle = document.querySelector("[data-nav-toggle]");
+            const navBackdrop = document.querySelector("[data-nav-backdrop]");
+            function closeNav() {
+                root.classList.remove("nav-open");
+            }
+            if (nav && navToggle) {
+                navToggle.addEventListener("click", function () {
+                    root.classList.toggle("nav-open");
+                });
+            }
+            if (navBackdrop) {
+                navBackdrop.addEventListener("click", closeNav);
+            }
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 980) {
+                    closeNav();
+                }
+            });
+        })();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

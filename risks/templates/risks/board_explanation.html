@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Board Risk Explanation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --page:#03070b; --line:rgba(188,207,238,.18); --line-strong:rgba(188,207,238,.28); --text:#edf4ff; --muted:#92a0b4; --blue:#4f8cff; --green:#18a66a; --danger:#ef4056; --gold:#f5b72e; --glass-shadow:0 24px 70px rgba(0,0,0,.34); }
+        html { min-height: 100%; }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 12% 8%, rgba(79,140,255,.14), transparent 30%), radial-gradient(circle at 78% 18%, rgba(24,166,106,.10), transparent 28%), linear-gradient(180deg,#03070b 0%,#050a0f 48%,#030608 100%);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text);
+        }
+        .topbar {
+            margin: 12px 16px 0;
+            border: 1px solid var(--line-strong);
+            background: linear-gradient(135deg, rgba(19,23,34,.72), rgba(11,15,22,.56));
+            color: var(--text);
+            padding: 16px 28px;
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: blur(18px) saturate(130%);
+            -webkit-backdrop-filter: blur(18px) saturate(130%);
+        }
+        .page-wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 28px 16px 40px;
+        }
+        .panel {
+            background: linear-gradient(135deg, rgba(34,41,58,.58), rgba(10,15,22,.42)), rgba(12,17,25,.34);
+            border: 1px solid var(--line-strong);
+            border-radius: 0;
+            box-shadow: var(--glass-shadow);
+            padding: 22px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(18px) saturate(128%);
+            -webkit-backdrop-filter: blur(18px) saturate(128%);
+        }
+        .section-title {
+            font-weight: 800;
+            color: var(--blue);
+            margin-bottom: 12px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,.045);
+            border: 1px solid var(--line);
+            border-radius: 0;
+            padding: 14px;
+            text-align: center;
+            height: 100%;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+        .badge-soft {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 0;
+            font-size: 0.85rem;
+            font-weight: 700;
+            background: rgba(79,140,255,.14);
+            border: 1px solid rgba(79,140,255,.35);
+            color: var(--text);
+            margin: 4px 6px 0 0;
+        }
+        .risk-item {
+            border: 1px solid var(--line);
+            border-radius: 0;
+            padding: 14px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,.035);
+        }
+        .small-muted {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .btn-light, .btn-warning { border-radius:0; border-color:var(--line-strong); }
+        .btn-light { background:rgba(255,255,255,.06); color:var(--text); }
+        .btn-warning { background:var(--gold); }
+        .theme-toggle { width:31px; height:31px; display:inline-grid; place-items:center; padding:0; }
+        body.theme-light { --page:#caecf8; --line:rgba(9,66,88,.16); --line-strong:rgba(9,66,88,.24); --text:#071a26; --muted:#4f6674; --blue:#1f56b7; --green:#087b5b; --danger:#e12d48; --gold:#c98a00; --glass-shadow:0 24px 70px rgba(18,91,117,.18); background:radial-gradient(circle at 12% 10%, rgba(255,255,255,.78), transparent 28%), radial-gradient(circle at 72% 18%, rgba(98,190,216,.32), transparent 30%), linear-gradient(180deg,#d7f3fb 0%,#bee5f2 48%,#d8f1f8 100%); background-attachment:fixed; color:var(--text); }
+        body.theme-light .topbar,
+        body.theme-light .panel { background:linear-gradient(135deg, rgba(255,255,255,.70), rgba(232,248,253,.46)), rgba(238,250,255,.42); border-color:var(--line-strong); color:var(--text); box-shadow:var(--glass-shadow); }
+        body.theme-light .stat-box,
+        body.theme-light .risk-item,
+        body.theme-light .badge-soft { background:rgba(255,255,255,.46); border-color:var(--line); color:var(--text); }
+        body.theme-light .btn-light { color:#102d3d; background:rgba(255,255,255,.42); border-color:var(--line); }
+        body.theme-light .btn-light:hover { color:#0b2c66; background:rgba(31,86,183,.14); border-color:rgba(31,86,183,.24); }
+        body.theme-light .section-title { color:var(--blue); }
+        body.theme-light .small-muted,
+        body.theme-light .stat-label { color:var(--muted); }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: #03070b;
+            }
+            .panel {
+                box-shadow: none;
+                border: 1px solid var(--line);
+            }
+        }
+    </style>
+</head>
+<body>
+<script>
+    (function () {
+        if ((localStorage.getItem("bankRiskTheme") || "light") === "light") document.body.classList.add("theme-light");
+    })();
+</script>
+
+<div class="topbar d-flex justify-content-between align-items-center">
+    <div>
+        <div class="fs-4 fw-bold">Board Risk Explanation</div>
+        <div class="small opacity-75">
+            {% if selected_area %}Department: {{ selected_area }}{% else %}All Departments{% endif %}
+        </div>
+    </div>
+
+    <div class="no-print">
+        <button type="button" class="btn btn-light btn-sm theme-toggle me-2" id="themeToggle" title="Switch theme" aria-label="Switch theme">L</button>
+        <a href="/" class="btn btn-light btn-sm">Back to Dashboard</a>
+        <button onclick="window.print()" class="btn btn-warning btn-sm ms-2">Print / Save PDF</button>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <div class="panel">
+        <h3 class="section-title">Executive Summary</h3>
+        <p class="mb-0">{{ executive_summary }}</p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="stat-label">Total Risks</div>
+                <div class="stat-value">{{ risks|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="stat-label">Improved</div>
+                <div class="stat-value">{{ improvement_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="stat-label">Unchanged</div>
+                <div class="stat-value">{{ unchanged_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="stat-label">Worsened</div>
+                <div class="stat-value">{{ worsened_count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel mt-3">
+        <h3 class="section-title">Inherent Risk (Before Controls)</h3>
+        <p>{{ inherent_summary }}</p>
+
+        <div class="mt-2">
+            <span class="badge-soft">Critical: {{ inherent_counts.Critical }}</span>
+            <span class="badge-soft">Severe: {{ inherent_counts.Severe }}</span>
+            <span class="badge-soft">Moderate: {{ inherent_counts.Moderate }}</span>
+            <span class="badge-soft">Sustainable: {{ inherent_counts.Sustainable }}</span>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title">Residual Risk (After Controls)</h3>
+        <p>{{ residual_summary }}</p>
+
+        <div class="mt-2">
+            <span class="badge-soft">Critical: {{ residual_counts.Critical }}</span>
+            <span class="badge-soft">Severe: {{ residual_counts.Severe }}</span>
+            <span class="badge-soft">Moderate: {{ residual_counts.Moderate }}</span>
+            <span class="badge-soft">Sustainable: {{ residual_counts.Sustainable }}</span>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title">Control Effectiveness Commentary</h3>
+        <p class="mb-0">{{ control_effectiveness }}</p>
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title">Key Themes Observed</h3>
+        {% if top_themes %}
+            {% for theme, count in top_themes %}
+                <span class="badge-soft">{{ theme }} ({{ count }})</span>
+            {% endfor %}
+        {% else %}
+            <p class="mb-0">No dominant keyword themes were detected from the current risk descriptions.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title">Illustrative High-Priority Risk Items</h3>
+
+        {% if sample_risks %}
+            {% for risk in sample_risks %}
+                <div class="risk-item">
+                    <div class="fw-bold">{{ risk.reference_id }} - {{ risk.description }}</div>
+                    <div class="small-muted mt-1">
+                        <strong>Department:</strong> {{ risk.area_name|default:"-" }} |
+                        <strong>Inherent:</strong> {{ risk.inherent_rating }} |
+                        <strong>Residual:</strong> {{ risk.residual_rating }}
+                    </div>
+
+                    {% if risk.caused_by %}
+                        <div class="mt-2"><strong>Root Cause:</strong> {{ risk.caused_by }}</div>
+                    {% endif %}
+
+                    {% if risk.consequences %}
+                        <div class="mt-1"><strong>Potential Impact:</strong> {{ risk.consequences }}</div>
+                    {% endif %}
+
+                    {% if risk.controls %}
+                        <div class="mt-1"><strong>Existing Controls:</strong> {{ risk.controls }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="mb-0">No sample risks are available for display.</p>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title">Board Recommendation</h3>
+        <p class="mb-0">{{ board_recommendation }}</p>
+    </div>
+
+</div>
+<script>
+    (function () {
+        const key = "bankRiskTheme";
+        const body = document.body;
+        const toggle = document.getElementById("themeToggle");
+        function applyTheme(theme) {
+            body.classList.toggle("theme-light", theme === "light");
+            if (toggle) {
+                toggle.textContent = theme === "light" ? "D" : "L";
+                toggle.title = theme === "light" ? "Switch to dark mode" : "Switch to light mode";
+            }
+        }
+        applyTheme(localStorage.getItem(key) || "light");
+        if (toggle) toggle.addEventListener("click", function () {
+            const nextTheme = body.classList.contains("theme-light") ? "dark" : "light";
+            localStorage.setItem(key, nextTheme);
+            applyTheme(nextTheme);
+        });
+    })();
+</script>
+
+</body>
+</html>
