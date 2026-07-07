@@ -3,7 +3,7 @@ services:
     name: new-risk-site
     env: python
     buildCommand: "bash build.sh"
-    startCommand: "gunicorn bank_risk_system.wsgi:application"
+    startCommand: "python manage.py migrate && python manage.py ensure_superuser && gunicorn bank_risk_system.wsgi:application"
     envVars:
       - key: DEBUG
         value: "False"
@@ -13,3 +13,9 @@ services:
         value: "https://*.onrender.com"
       - key: SECRET_KEY
         generateValue: true
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "ADMIN"
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "admin@example.com"
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
