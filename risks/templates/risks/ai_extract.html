@@ -313,6 +313,7 @@
             <nav class="nav-actions">
                 <a href="{% url 'dashboard' %}" class="btn">Dashboard</a>
                 <a href="{% url 'compliance-assistant' %}" class="btn">Risk AI</a>
+                <a href="{% url 'customer-profile-list' %}" class="btn">Profiles</a>
                 <a href="{% url 'official_report' %}" class="btn">Official Report</a>
                 <button type="button" class="btn theme-toggle" id="themeToggle" title="Switch theme" aria-label="Switch theme">L</button>
             </nav>
@@ -336,10 +337,11 @@
             <article class="panel">
                 <div class="eyebrow">Paste Source Text</div>
                 <h2 class="panel-title">KRI table or risk notes</h2>
-                <p class="muted">Use clean rows where possible. Include department, KRI, related risk, occurrence, process owner, and comments when available.</p>
+                <p class="muted">Paste text or upload Excel, Word, PDF, or TXT files. Customer Risk Profile templates are scored with the official determinant scale.</p>
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
+                    <input type="file" name="source_file" accept=".xlsx,.xlsm,.docx,.pdf,.txt" style="margin-bottom:12px;">
                     <textarea name="raw_text" placeholder="Paste KRI table text or risk notes here...">{{ raw_text }}</textarea>
                     <div class="btnrow">
                         <button type="submit" class="btn-primary">Extract Risk Drafts</button>
@@ -351,6 +353,8 @@
                         <form method="post" action="{% url 'ai-extract-save' %}">
                             {% csrf_token %}
                             <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
+                            <input type="hidden" name="source_filename" value="{{ source_filename|default:'' }}">
+                            <input type="hidden" name="source_type" value="{{ source_type|default:'' }}">
                             <button type="submit" class="btn-warning">Save as Draft Risks</button>
                             <div class="muted" style="margin-top:6px;">Saves extracted items as [DRAFT] in the risk register.</div>
                         </form>
@@ -358,6 +362,8 @@
                         <form method="post" action="{% url 'ai-extract-save-approve' %}">
                             {% csrf_token %}
                             <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
+                            <input type="hidden" name="source_filename" value="{{ source_filename|default:'' }}">
+                            <input type="hidden" name="source_type" value="{{ source_type|default:'' }}">
                             <button type="submit" class="btn-success">Save and Approve Now</button>
                         </form>
                     </div>
@@ -449,6 +455,18 @@
                                 <div class="field-label">Controls</div>
                                 <div class="field-value">{{ r.control_descriptions }}</div>
                             </div>
+                            {% if r.recommendation %}
+                            <div class="field full">
+                                <div class="field-label">Recommendation</div>
+                                <div class="field-value">{{ r.recommendation }}</div>
+                            </div>
+                            {% endif %}
+                            {% if r.confidence_notes %}
+                            <div class="field full">
+                                <div class="field-label">Extraction Confidence</div>
+                                <div class="field-value">{{ r.confidence_notes }}</div>
+                            </div>
+                            {% endif %}
                             {% if r.customer_profile_notes %}
                             <div class="field full">
                                 <div class="field-label">Profile Determinants</div>

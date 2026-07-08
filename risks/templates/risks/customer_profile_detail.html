@@ -1,0 +1,62 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Customer Risk Profile | Bank Risk System{% endblock %}
+{% block module_name %}Customer Risk Profile{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="eyebrow">Customer Risk Profile</div>
+    <h1>{{ profile.account_name|default:"Unnamed account" }}</h1>
+    <p class="muted">{{ profile.account_no|default:"No account number" }}{% if profile.source_filename %} | {{ profile.source_filename }}{% endif %}</p>
+    <div class="hero-actions">
+        {% if profile.risk %}<a class="btnx" href="{% url 'risk-detail' profile.risk.id %}">Linked Risk {{ profile.risk.reference_id }}</a>{% endif %}
+        <a class="btnx" href="{% url 'customer-profile-list' %}">All Profiles</a>
+        <a class="btn-primaryx" href="{% url 'ai-extract' %}">Upload Another</a>
+    </div>
+</section>
+
+<section class="grid-4">
+    <div class="stat"><span>Rating</span><strong>{{ profile.profile_rating|default:"-" }}</strong></div>
+    <div class="stat"><span>Average Score</span><strong>{{ profile.average_score|default:"-" }}</strong></div>
+    <div class="stat"><span>Total Score</span><strong>{{ profile.total_score }}</strong></div>
+    <div class="stat"><span>Determinants</span><strong>{{ profile.determinant_count }}</strong></div>
+</section>
+
+<section class="grid-2 mt-4">
+    <article class="panel">
+        <div class="eyebrow">Recommendation</div>
+        <p>{{ profile.recommendation|default:"No recommendation recorded." }}</p>
+    </article>
+    <article class="panel">
+        <div class="eyebrow">Enhanced Due Diligence</div>
+        <p>{{ profile.enhanced_due_diligence|default:"No enhanced due diligence guidance recorded." }}</p>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">Determinants</div>
+    <table>
+        <thead><tr><th>Category</th><th>Variable</th><th>Weight</th></tr></thead>
+        <tbody>
+            {% for item in profile.determinants %}
+                <tr><td>{{ item.category }}</td><td>{{ item.variable }}</td><td><span class="badge-soft">{{ item.weight }}</span></td></tr>
+            {% empty %}
+                <tr><td colspan="3">No determinants recorded.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="grid-2">
+    <article class="panel">
+        <div class="eyebrow">Confidence</div>
+        <p>{{ profile.confidence_notes|default:"No confidence notes recorded." }}</p>
+    </article>
+    <article class="panel">
+        <div class="eyebrow">History</div>
+        {% for item in history %}
+            <p><a href="{% url 'customer-profile-detail' item.id %}">{{ item.created_at|date:"Y-m-d" }} - {{ item.profile_rating }} - {{ item.average_score }}</a></p>
+        {% empty %}
+            <p class="muted">No previous profiles found for this account.</p>
+        {% endfor %}
+    </article>
+</section>
+{% endblock %}

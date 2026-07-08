@@ -328,6 +328,45 @@ class RiskTrendSnapshot(models.Model):
         return f"{self.risk.reference_id} trend on {self.snapshot_date}"
 
 
+class CustomerRiskProfile(models.Model):
+    risk = models.ForeignKey(
+        RiskAssessment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_profiles',
+    )
+    account_no = models.CharField(max_length=80, blank=True, default="")
+    account_name = models.CharField(max_length=200, blank=True, default="")
+    profile_rating = models.CharField(max_length=20, blank=True, default="")
+    average_score = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
+    total_score = models.PositiveSmallIntegerField(default=0)
+    determinant_count = models.PositiveSmallIntegerField(default=0)
+    determinants = models.JSONField(blank=True, default=list)
+    recommendation = models.TextField(blank=True, default="")
+    enhanced_due_diligence = models.TextField(blank=True, default="")
+    confidence_notes = models.TextField(blank=True, default="")
+    source_filename = models.CharField(max_length=255, blank=True, default="")
+    source_type = models.CharField(max_length=30, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customer_profiles_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Customer Risk Profile"
+        verbose_name_plural = "Customer Risk Profiles"
+
+    def __str__(self):
+        label = self.account_name or self.account_no or "Customer Profile"
+        return f"{label} - {self.profile_rating or 'Unrated'}"
+
+
 class SystemAuditLog(models.Model):
     ACTION_CHOICES = [
         ('create', 'Create'),

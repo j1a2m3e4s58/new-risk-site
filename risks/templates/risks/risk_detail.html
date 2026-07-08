@@ -42,9 +42,23 @@
 </section>
 <section class="grid-2">
     <article class="panel">
+        <div class="eyebrow">Linked Customer Profiles</div>
+        {% for profile in customer_profiles %}
+            <p>
+                <a href="{% url 'customer-profile-detail' profile.id %}">
+                    {{ profile.created_at|date:"Y-m-d" }} - {{ profile.account_name|default:profile.account_no|default:"Customer" }} - {{ profile.profile_rating }}{% if profile.average_score %} ({{ profile.average_score }}){% endif %}
+                </a>
+            </p>
+        {% empty %}
+            <p class="muted">No customer profile linked.</p>
+        {% endfor %}
+    </article>
+    <article class="panel">
         <div class="eyebrow">Incidents</div>
         {% for incident in incidents %}<p>{{ incident.incident_date }} - <strong>{{ incident.title }}</strong> ({{ incident.status }})</p>{% empty %}<p class="muted">No incidents linked.</p>{% endfor %}
     </article>
+</section>
+<section class="grid-2">
     <article class="panel">
         <div class="eyebrow">Audit Trail</div>
         {% for log in audit_logs %}<p>{{ log.created_at|date:"Y-m-d H:i" }} - {{ log.summary }}</p>{% empty %}<p class="muted">No audit log yet.</p>{% endfor %}

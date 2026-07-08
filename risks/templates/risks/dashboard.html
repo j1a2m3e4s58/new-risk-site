@@ -737,6 +737,10 @@
                     <i class="fas fa-wand-magic-sparkles"></i>
                     AI Extract
                 </a>
+                <a href="{% url 'customer-profile-list' %}" class="quick-tile">
+                    <i class="fas fa-id-card"></i>
+                    Customer Profiles
+                </a>
                 <a href="{% url 'board-explanation' %}?filter={{ filter_type|default:'approved' }}{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" target="_blank" class="quick-tile">
                     <i class="fas fa-landmark"></i>
                     Board Brief

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
-from .models import AIAssistantAuditLog, AISettings, RiskAssessment, RiskIncident, RiskTrendSnapshot, SystemAuditLog
+from .models import AIAssistantAuditLog, AISettings, CustomerRiskProfile, RiskAssessment, RiskIncident, RiskTrendSnapshot, SystemAuditLog
 
 
 # ========= AI SETTINGS ADMIN =========
@@ -44,6 +44,17 @@ class RiskIncidentInline(admin.TabularInline):
     readonly_fields = ()
 
 
+class CustomerRiskProfileInline(admin.TabularInline):
+    model = CustomerRiskProfile
+    extra = 0
+    fields = ('account_no', 'account_name', 'profile_rating', 'average_score', 'total_score', 'created_at')
+    readonly_fields = fields
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class OverdueActionFilter(admin.SimpleListFilter):
     title = "overdue action"
     parameter_name = "overdue_action"
@@ -65,7 +76,7 @@ class OverdueActionFilter(admin.SimpleListFilter):
 
 @admin.register(RiskAssessment)
 class RiskAssessmentAdmin(admin.ModelAdmin):
-    inlines = [RiskIncidentInline, RiskTrendSnapshotInline]
+    inlines = [RiskIncidentInline, CustomerRiskProfileInline, RiskTrendSnapshotInline]
     list_display = (
         'reference_id',
         'area_name',
@@ -313,6 +324,33 @@ class SystemAuditLogAdmin(admin.ModelAdmin):
         'area_name',
         'summary',
         'metadata',
+        'created_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(CustomerRiskProfile)
+class CustomerRiskProfileAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'account_name', 'account_no', 'profile_rating', 'average_score', 'total_score', 'risk')
+    list_filter = ('profile_rating', 'source_type', 'created_at')
+    search_fields = ('account_name', 'account_no', 'profile_rating', 'risk__reference_id')
+    readonly_fields = (
+        'risk',
+        'account_no',
+        'account_name',
+        'profile_rating',
+        'average_score',
+        'total_score',
+        'determinant_count',
+        'determinants',
+        'recommendation',
+        'enhanced_due_diligence',
+        'confidence_notes',
+        'source_filename',
+        'source_type',
+        'created_by',
         'created_at',
     )
 

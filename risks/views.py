@@ -14,8 +14,9 @@ import re
 import shutil
 import tempfile
 import zipfile
+from io import BytesIO
 from urllib.parse import urlencode
-from .models import RiskAssessment, ReportConfiguration, RiskIncident, SystemAuditLog
+from .models import CustomerRiskProfile, RiskAssessment, ReportConfiguration, RiskIncident, SystemAuditLog
 from .forms import RiskActionUpdateForm, RiskAssessmentForm, RiskIncidentForm
 
 # ========= ZERO_OCCURRENCE_HELPER_START =========
@@ -344,6 +345,78 @@ def _profile_levels_from_rating(profile_rating):
     return "Low", "Medium"
 
 
+def _edd_recommendation(profile_rating, high_factors):
+    if profile_rating == "High":
+        return (
+            "Enhanced due diligence required: verify source of funds, confirm beneficial ownership, "
+            "screen related parties, apply closer transaction monitoring, obtain senior management approval, "
+            "and schedule a shorter review cycle."
+        )
+    if high_factors:
+        return (
+            "Moderate monitoring required: review the high-weight determinants, confirm KYC completeness, "
+            "validate expected transaction behavior, and document management review."
+        )
+    return "Standard customer due diligence and periodic monitoring are appropriate based on the current profile."
+
+
+def _profile_confidence_notes(source_type, determinant_rows, average_score, profile_rating):
+    source_label = source_type or "pasted text"
+    return (
+        f"Source: {source_label}. Detected {len(determinant_rows)} determinant(s). "
+        f"Applied template scale Low <= 1.20, Moderate 1.21-2.00, High 2.01-3.00. "
+        f"Average score {average_score} produced {profile_rating} profile rating."
+    )
+
+
+def _uploaded_file_to_text(uploaded_file):
+    if not uploaded_file:
+        return "", "", ""
+
+    filename = uploaded_file.name or "uploaded-file"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    data = uploaded_file.read()
+
+    if ext in ["xlsx", "xlsm"]:
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(BytesIO(data), data_only=True)
+        lines = []
+        for worksheet in workbook.worksheets:
+            lines.append(f"Sheet: {worksheet.title}")
+            for row in worksheet.iter_rows(values_only=True):
+                values = [str(value).strip() for value in row if value not in [None, ""]]
+                if values:
+                    lines.append("\t".join(values))
+        return "\n".join(lines), filename, "excel"
+
+    if ext == "docx":
+        from docx import Document
+
+        document = Document(BytesIO(data))
+        lines = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
+        for table in document.tables:
+            for row in table.rows:
+                values = [cell.text.strip().replace("\n", " ") for cell in row.cells if cell.text.strip()]
+                if values:
+                    lines.append("\t".join(values))
+        return "\n".join(lines), filename, "word"
+
+    if ext == "pdf":
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(data))
+        lines = []
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            if text.strip():
+                lines.append(text.strip())
+        return "\n".join(lines), filename, "pdf"
+
+    text = data.decode("utf-8", errors="replace")
+    return text, filename, "text"
+
+
 def _extract_numeric_weight(parts):
     for part in reversed(parts):
         text = str(part).strip()
@@ -368,7 +441,7 @@ def _weight_from_profile_text(label, value):
     return 1
 
 
-def _parse_customer_risk_profile(raw_text):
+def _parse_customer_risk_profile(raw_text, source_type="", source_filename=""):
     lines = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
     lowered = "\n".join(lines).lower()
     if "customer risk profile" not in lowered and "risk determinants" not in lowered:
@@ -390,14 +463,20 @@ def _parse_customer_risk_profile(raw_text):
 
     determinant_rows = []
     current_category = ""
+    in_determinants = False
     for line in lines:
         parts = _split_extracted_row(line)
         if len(parts) < 2:
             continue
         joined = " ".join(parts).lower()
-        if any(skip in joined for skip in ["total risk score", "average risk score", "rating", "scale", "prepared by", "reviewed by", "approved by"]):
-            continue
         if "risk determinants" in joined or "risk variables" in joined:
+            in_determinants = True
+            continue
+        if "total risk score" in joined:
+            break
+        if not in_determinants:
+            continue
+        if any(skip in joined for skip in ["average risk score", "rating", "scale", "prepared by", "reviewed by", "approved by", "sheet:"]):
             continue
 
         weight = _extract_numeric_weight(parts)
@@ -429,6 +508,8 @@ def _parse_customer_risk_profile(raw_text):
     high_factors = [row for row in determinant_rows if row["weight"] >= 3]
     account_label = account_name or account_no or "Customer"
     high_factor_text = "; ".join(f"{row['category']}: {row['variable']}" for row in high_factors[:6]) or "No high-weight determinant identified."
+    recommendation = _edd_recommendation(profile_rating, high_factors)
+    confidence_notes = _profile_confidence_notes(source_type, determinant_rows, average_score, "Moderate" if profile_rating == "Medium" else profile_rating)
 
     base_ref = f"CRP-{_clean_ref_part(account_label)}"
     reference_id = make_unique_reference_id(base_ref)
@@ -460,6 +541,22 @@ def _parse_customer_risk_profile(raw_text):
         "customer_profile_score": average_score,
         "customer_profile_rating": rating_label,
         "customer_profile_notes": "\n".join(f"{row['category']} | {row['variable']} | Weight {row['weight']}" for row in determinant_rows),
+        "customer_profile_data": {
+            "account_no": account_no,
+            "account_name": account_name,
+            "profile_rating": rating_label,
+            "average_score": average_score,
+            "total_score": total_score,
+            "determinant_count": len(determinant_rows),
+            "determinants": determinant_rows,
+            "recommendation": recommendation,
+            "enhanced_due_diligence": recommendation,
+            "confidence_notes": confidence_notes,
+            "source_filename": source_filename,
+            "source_type": source_type,
+        },
+        "recommendation": recommendation,
+        "confidence_notes": confidence_notes,
     }
 
 
@@ -539,8 +636,8 @@ def _reduce_level(level):
     return order[max(order.index(level) - 1, 0)]
 
 
-def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False):
-    profile_record = _parse_customer_risk_profile(raw_text)
+def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source_type="", source_filename=""):
+    profile_record = _parse_customer_risk_profile(raw_text, source_type=source_type, source_filename=source_filename)
     if profile_record:
         return {
             "area_name": profile_record["area_name"],
@@ -624,6 +721,9 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False):
             "customer_profile_score": None,
             "customer_profile_rating": "",
             "customer_profile_notes": "",
+            "customer_profile_data": None,
+            "recommendation": "Review extracted risk and confirm controls, owner, and action plan before approval.",
+            "confidence_notes": "KRI extraction used occurrence text, risk keywords, and process context to estimate likelihood and impact.",
         })
         counter += 1
 
@@ -631,7 +731,7 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False):
 
 
 def _create_risk_from_extracted(result, request, workflow_status):
-    return RiskAssessment.objects.create(
+    risk = RiskAssessment.objects.create(
         reference_id=make_unique_reference_id(result["reference_id"]),
         area_name=result["area_name"],
         description=("[DRAFT] " if workflow_status == "Draft" else "") + result["risk_description"],
@@ -651,6 +751,25 @@ def _create_risk_from_extracted(result, request, workflow_status):
         control_owner=result["control_owner"],
         updated_by=request.user,
     )
+    profile_data = result.get("customer_profile_data") or {}
+    if profile_data:
+        CustomerRiskProfile.objects.create(
+            risk=risk,
+            account_no=profile_data.get("account_no", ""),
+            account_name=profile_data.get("account_name", ""),
+            profile_rating=profile_data.get("profile_rating", ""),
+            average_score=profile_data.get("average_score"),
+            total_score=profile_data.get("total_score") or 0,
+            determinant_count=profile_data.get("determinant_count") or 0,
+            determinants=profile_data.get("determinants") or [],
+            recommendation=profile_data.get("recommendation", ""),
+            enhanced_due_diligence=profile_data.get("enhanced_due_diligence", ""),
+            confidence_notes=profile_data.get("confidence_notes", ""),
+            source_filename=profile_data.get("source_filename", ""),
+            source_type=profile_data.get("source_type", ""),
+            created_by=request.user,
+        )
+    return risk
 
 
 # --- LOGIN REDIRECT ---
@@ -896,11 +1015,38 @@ def risk_detail(request, risk_id):
     return render(request, "risks/risk_detail.html", {
         "risk": risk,
         "incidents": risk.incidents.all(),
+        "customer_profiles": risk.customer_profiles.all()[:10],
         "audit_logs": SystemAuditLog.objects.filter(reference_id=risk.reference_id)[:15],
         "can_submit_risk": can_submit_risk(request.user),
         "can_review_risk": can_review_risk(request.user),
         "can_approve_delete": can_approve_delete(request.user),
     })
+
+
+@login_required
+def customer_profile_list(request):
+    q = request.GET.get("q", "").strip()
+    profiles = CustomerRiskProfile.objects.select_related("risk", "created_by").all()
+    if q:
+        profiles = profiles.filter(
+            Q(account_name__icontains=q)
+            | Q(account_no__icontains=q)
+            | Q(profile_rating__icontains=q)
+            | Q(risk__reference_id__icontains=q)
+        )
+    return render(request, "risks/customer_profiles.html", {"profiles": profiles[:250], "query_text": q})
+
+
+@login_required
+def customer_profile_detail(request, profile_id):
+    profile = get_object_or_404(
+        CustomerRiskProfile.objects.select_related("risk", "created_by"),
+        id=profile_id,
+    )
+    history = CustomerRiskProfile.objects.filter(
+        Q(account_no=profile.account_no) | Q(account_name=profile.account_name)
+    ).exclude(id=profile.id)[:20]
+    return render(request, "risks/customer_profile_detail.html", {"profile": profile, "history": history})
 
 
 @login_required
@@ -1277,16 +1423,38 @@ def official_report(request):
 # ========= AI EXTRACT (Preview) =========
 @login_required
 def ai_extract_risks(request):
-    context = {"raw_text": "", "area_name": "", "reporting_period": "", "results": [], "error": ""}
+    context = {
+        "raw_text": "",
+        "area_name": "",
+        "reporting_period": "",
+        "results": [],
+        "error": "",
+        "source_filename": "",
+        "source_type": "",
+    }
 
     if request.method == "POST":
         raw_text = request.POST.get("raw_text", "")
-        context["raw_text"] = raw_text
+        uploaded_file = request.FILES.get("source_file")
+        source_filename = ""
+        source_type = "pasted text" if raw_text.strip() else ""
+        if uploaded_file:
+            try:
+                file_text, source_filename, source_type = _uploaded_file_to_text(uploaded_file)
+                raw_text = f"{raw_text}\n{file_text}".strip() if raw_text.strip() else file_text
+            except Exception as exc:
+                context["error"] = f"Could not read uploaded file: {exc}"
 
-        if not raw_text.strip():
-            context["error"] = "Please paste your KRI table text first."
+        context["raw_text"] = raw_text
+        context["source_filename"] = source_filename
+        context["source_type"] = source_type
+
+        if context["error"]:
+            pass
+        elif not raw_text.strip():
+            context["error"] = "Please paste KRI/profile text or upload an Excel, Word, PDF, or TXT file first."
         else:
-            extraction = _extract_risk_records_from_text(raw_text)
+            extraction = _extract_risk_records_from_text(raw_text, source_type=source_type, source_filename=source_filename)
             context["area_name"] = extraction["area_name"]
             context["reporting_period"] = extraction["reporting_period"]
             context["results"] = extraction["results"]
@@ -1306,7 +1474,12 @@ def ai_extract_save_drafts(request):
     if not raw_text:
         return redirect("ai-extract")
 
-    extraction = _extract_risk_records_from_text(raw_text, skip_zero_occurrence=True)
+    extraction = _extract_risk_records_from_text(
+        raw_text,
+        skip_zero_occurrence=True,
+        source_type=request.POST.get("source_type", ""),
+        source_filename=request.POST.get("source_filename", ""),
+    )
     saved_count = 0
     for result in extraction["results"]:
         try:
@@ -1329,7 +1502,12 @@ def ai_extract_save_and_approve(request):
     if not raw_text or not raw_text.strip():
         return redirect("ai-extract")
 
-    extraction = _extract_risk_records_from_text(raw_text, skip_zero_occurrence=True)
+    extraction = _extract_risk_records_from_text(
+        raw_text,
+        skip_zero_occurrence=True,
+        source_type=request.POST.get("source_type", ""),
+        source_filename=request.POST.get("source_filename", ""),
+    )
     saved_count = 0
     for result in extraction["results"]:
         try:

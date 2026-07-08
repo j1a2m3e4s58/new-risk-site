@@ -1,0 +1,46 @@
+{% extends "risks/management_base.html" %}
+{% block title %}Customer Risk Profiles | Bank Risk System{% endblock %}
+{% block module_name %}Customer Risk Profiles{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="eyebrow">Customer Due Diligence</div>
+    <h1>Customer Risk Profile History</h1>
+    <p class="muted">Profiles extracted from Excel, Word, PDF, or pasted CRP templates. Each upload is retained for trend and audit review.</p>
+    <form method="get" class="actions mt-3">
+        <input name="q" value="{{ query_text }}" placeholder="Search account, rating, or linked risk">
+        <button class="btn-primaryx" type="submit">Search</button>
+        <a class="btnx" href="{% url 'ai-extract' %}">Upload Profile</a>
+    </form>
+</section>
+
+<section class="panel">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Account</th>
+                <th>Rating</th>
+                <th>Average</th>
+                <th>Total</th>
+                <th>Linked Risk</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for profile in profiles %}
+                <tr>
+                    <td>{{ profile.created_at|date:"Y-m-d H:i" }}</td>
+                    <td><a href="{% url 'customer-profile-detail' profile.id %}"><strong>{{ profile.account_name|default:"Unnamed account" }}</strong><br><span class="muted">{{ profile.account_no|default:"No account number" }}</span></a></td>
+                    <td><span class="badge-soft">{{ profile.profile_rating|default:"Unrated" }}</span></td>
+                    <td>{{ profile.average_score|default:"-" }}</td>
+                    <td>{{ profile.total_score }}</td>
+                    <td>{% if profile.risk %}<a href="{% url 'risk-detail' profile.risk.id %}">{{ profile.risk.reference_id }}</a>{% else %}-{% endif %}</td>
+                    <td>{{ profile.source_type|default:"-" }}{% if profile.source_filename %}<br><span class="muted">{{ profile.source_filename }}</span>{% endif %}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7">No customer risk profiles have been uploaded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
