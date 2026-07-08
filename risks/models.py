@@ -348,6 +348,12 @@ class CustomerRiskProfile(models.Model):
     confidence_notes = models.TextField(blank=True, default="")
     source_filename = models.CharField(max_length=255, blank=True, default="")
     source_type = models.CharField(max_length=30, blank=True, default="")
+    evidence_file = models.FileField(upload_to='customer_profiles/', blank=True, null=True)
+    review_frequency = models.CharField(max_length=40, blank=True, default="")
+    next_review_date = models.DateField(blank=True, null=True)
+    previous_rating = models.CharField(max_length=20, blank=True, default="")
+    previous_average_score = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
+    movement = models.CharField(max_length=20, blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

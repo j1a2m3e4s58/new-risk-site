@@ -12,6 +12,7 @@ urlpatterns = [
     path('risks/<int:risk_id>/delete/', views.risk_delete, name='risk-delete'),
     path('customer-profiles/', views.customer_profile_list, name='customer-profile-list'),
     path('customer-profiles/<int:profile_id>/', views.customer_profile_detail, name='customer-profile-detail'),
+    path('customer-profiles/<int:profile_id>/report/', views.customer_profile_report, name='customer-profile-report'),
     path('departments/<path:area_name>/', views.department_detail, name='department-detail'),
     path('calendar/', views.risk_calendar, name='risk-calendar'),
     path('incidents/add/', views.incident_create, name='incident-create'),
@@ -30,6 +31,7 @@ urlpatterns = [
     path('ai-extract/', views.ai_extract_risks, name='ai-extract'),
     path('ai-extract/save/', views.ai_extract_save_drafts, name='ai-extract-save'),
     path('ai-extract/save-approve/', views.ai_extract_save_and_approve, name='ai-extract-save-approve'),
+    path('ai-extract/save-profile/', views.ai_extract_save_profile_only, name='ai-extract-save-profile'),
 
     path('draft/<int:risk_id>/edit/', views.edit_draft_risk, name='edit-draft-risk'),
     path('drafts/approve-all/', views.bulk_approve_drafts, name='bulk-approve-drafts'),

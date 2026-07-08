@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Risk Profile Report</title>
+    <style>
+        @page { size: A4 portrait; margin: 1.2cm; }
+        body { font-family: "Segoe UI", Arial, sans-serif; background:#f2fbff; color:#071a26; margin:0; padding:22px; }
+        .toolbar { text-align:right; margin-bottom:14px; }
+        .btn { border:1px solid #9bb8c4; background:#1f56b7; color:#fff; padding:9px 14px; font-weight:800; text-decoration:none; cursor:pointer; }
+        .sheet { background:rgba(255,255,255,.78); border:1px solid #b8d1dc; padding:24px; box-shadow:0 22px 70px rgba(18,91,117,.16); }
+        h1 { margin:0 0 4px; font-size:28px; }
+        h2 { color:#1f56b7; border-bottom:1px solid #b8d1dc; padding-bottom:6px; margin-top:24px; font-size:18px; }
+        .muted { color:#4f6674; }
+        .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin:18px 0; }
+        .stat { border:1px solid #c4dce5; padding:12px; background:rgba(255,255,255,.62); }
+        .stat span { display:block; font-size:11px; text-transform:uppercase; color:#4f6674; font-weight:800; letter-spacing:.06em; }
+        .stat strong { display:block; font-size:20px; margin-top:5px; }
+        table { width:100%; border-collapse:collapse; margin-top:10px; }
+        th, td { border:1px solid #c4dce5; padding:8px; text-align:left; vertical-align:top; }
+        th { background:#dff3fb; color:#102d3d; font-size:12px; text-transform:uppercase; }
+        .signatures { display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; margin-top:60px; }
+        .sig { border-top:1px solid #071a26; padding-top:8px; text-align:center; font-weight:800; }
+        @media print { .toolbar { display:none; } body { background:#fff; padding:0; } .sheet { box-shadow:none; border:none; } }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a class="btn" href="{% url 'customer-profile-detail' profile.id %}">Back</a>
+        <button class="btn" onclick="window.print()">Print / Save PDF</button>
+    </div>
+    <main class="sheet">
+        <h1>Customer Risk Profile Report</h1>
+        <div class="muted">Generated {{ generated_at|date:"Y-m-d H:i" }} by {{ generated_by.username }}</div>
+
+        <div class="grid">
+            <div class="stat"><span>Account Name</span><strong>{{ profile.account_name|default:"-" }}</strong></div>
+            <div class="stat"><span>Account No.</span><strong>{{ profile.account_no|default:"-" }}</strong></div>
+            <div class="stat"><span>Rating</span><strong>{{ profile.profile_rating|default:"-" }}</strong></div>
+            <div class="stat"><span>Average Score</span><strong>{{ profile.average_score|default:"-" }}</strong></div>
+        </div>
+
+        <h2>Assessment Summary</h2>
+        <p><strong>Total Score:</strong> {{ profile.total_score }} | <strong>Determinants:</strong> {{ profile.determinant_count }} | <strong>Movement:</strong> {{ profile.movement|default:"New" }}</p>
+        <p><strong>Review Frequency:</strong> {{ profile.review_frequency|default:"-" }} | <strong>Next Review:</strong> {{ profile.next_review_date|default:"-" }}</p>
+        {% if profile.previous_rating %}<p><strong>Previous Profile:</strong> {{ profile.previous_rating }}{% if profile.previous_average_score %} / {{ profile.previous_average_score }}{% endif %}</p>{% endif %}
+        {% if profile.risk %}<p><strong>Linked Risk:</strong> {{ profile.risk.reference_id }} - {{ profile.risk.description }}</p>{% endif %}
+
+        <h2>Determinants</h2>
+        <table>
+            <thead><tr><th>Category</th><th>Variable</th><th>Weight</th></tr></thead>
+            <tbody>
+                {% for item in profile.determinants %}
+                    <tr><td>{{ item.category }}</td><td>{{ item.variable }}</td><td>{{ item.weight }}</td></tr>
+                {% empty %}
+                    <tr><td colspan="3">No determinants recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2>Recommendation</h2>
+        <p>{{ profile.recommendation|default:"No recommendation recorded." }}</p>
+
+        <h2>Enhanced Due Diligence</h2>
+        <p>{{ profile.enhanced_due_diligence|default:"No enhanced due diligence guidance recorded." }}</p>
+
+        <h2>Confidence Notes</h2>
+        <p>{{ profile.confidence_notes|default:"No confidence notes recorded." }}</p>
+
+        <div class="signatures">
+            <div class="sig">Prepared By / Date</div>
+            <div class="sig">Reviewed By / Date</div>
+            <div class="sig">Approved By / Date</div>
+        </div>
+    </main>
+</body>
+</html>

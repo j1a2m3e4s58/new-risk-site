@@ -21,7 +21,8 @@
                 <th>Account</th>
                 <th>Rating</th>
                 <th>Average</th>
-                <th>Total</th>
+                <th>Movement</th>
+                <th>Next Review</th>
                 <th>Linked Risk</th>
                 <th>Source</th>
             </tr>
@@ -33,12 +34,17 @@
                     <td><a href="{% url 'customer-profile-detail' profile.id %}"><strong>{{ profile.account_name|default:"Unnamed account" }}</strong><br><span class="muted">{{ profile.account_no|default:"No account number" }}</span></a></td>
                     <td><span class="badge-soft">{{ profile.profile_rating|default:"Unrated" }}</span></td>
                     <td>{{ profile.average_score|default:"-" }}</td>
-                    <td>{{ profile.total_score }}</td>
+                    <td>{{ profile.movement|default:"New" }}</td>
+                    <td>{{ profile.next_review_date|default:"-" }}</td>
                     <td>{% if profile.risk %}<a href="{% url 'risk-detail' profile.risk.id %}">{{ profile.risk.reference_id }}</a>{% else %}-{% endif %}</td>
-                    <td>{{ profile.source_type|default:"-" }}{% if profile.source_filename %}<br><span class="muted">{{ profile.source_filename }}</span>{% endif %}</td>
+                    <td>
+                        {{ profile.source_type|default:"-" }}{% if profile.source_filename %}<br><span class="muted">{{ profile.source_filename }}</span>{% endif %}
+                        <br><a href="{% url 'customer-profile-report' profile.id %}">Report</a>
+                        {% if profile.evidence_file %} | <a href="{{ profile.evidence_file.url }}">Evidence</a>{% endif %}
+                    </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="7">No customer risk profiles have been uploaded yet.</td></tr>
+                <tr><td colspan="8">No customer risk profiles have been uploaded yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

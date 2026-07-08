@@ -8,6 +8,7 @@
     <p class="muted">{{ profile.account_no|default:"No account number" }}{% if profile.source_filename %} | {{ profile.source_filename }}{% endif %}</p>
     <div class="hero-actions">
         {% if profile.risk %}<a class="btnx" href="{% url 'risk-detail' profile.risk.id %}">Linked Risk {{ profile.risk.reference_id }}</a>{% endif %}
+        <a class="btnx" href="{% url 'customer-profile-report' profile.id %}">Printable Report</a>
         <a class="btnx" href="{% url 'customer-profile-list' %}">All Profiles</a>
         <a class="btn-primaryx" href="{% url 'ai-extract' %}">Upload Another</a>
     </div>
@@ -17,7 +18,7 @@
     <div class="stat"><span>Rating</span><strong>{{ profile.profile_rating|default:"-" }}</strong></div>
     <div class="stat"><span>Average Score</span><strong>{{ profile.average_score|default:"-" }}</strong></div>
     <div class="stat"><span>Total Score</span><strong>{{ profile.total_score }}</strong></div>
-    <div class="stat"><span>Determinants</span><strong>{{ profile.determinant_count }}</strong></div>
+    <div class="stat"><span>Movement</span><strong>{{ profile.movement|default:"New" }}</strong></div>
 </section>
 
 <section class="grid-2 mt-4">
@@ -30,6 +31,19 @@
         <p>{{ profile.enhanced_due_diligence|default:"No enhanced due diligence guidance recorded." }}</p>
     </article>
 </section>
+
+<section class="grid-3">
+    <div class="stat"><span>Review Frequency</span><strong style="font-size:1rem;">{{ profile.review_frequency|default:"-" }}</strong></div>
+    <div class="stat"><span>Next Review</span><strong style="font-size:1rem;">{{ profile.next_review_date|default:"-" }}</strong></div>
+    <div class="stat"><span>Evidence</span><strong style="font-size:1rem;">{% if profile.evidence_file %}<a href="{{ profile.evidence_file.url }}">Open file</a>{% else %}Not attached{% endif %}</strong></div>
+</section>
+
+{% if profile.previous_rating %}
+<section class="panel">
+    <div class="eyebrow">Profile Comparison</div>
+    <p>Previous profile was <strong>{{ profile.previous_rating }}</strong>{% if profile.previous_average_score %} / {{ profile.previous_average_score }}{% endif %}. Current profile is <strong>{{ profile.profile_rating }}</strong>{% if profile.average_score %} / {{ profile.average_score }}{% endif %}. Movement: <strong>{{ profile.movement }}</strong>.</p>
+</section>
+{% endif %}
 
 <section class="panel">
     <div class="eyebrow">Determinants</div>

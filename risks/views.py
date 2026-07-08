@@ -369,6 +369,56 @@ def _profile_confidence_notes(source_type, determinant_rows, average_score, prof
     )
 
 
+def _review_plan_for_rating(profile_rating):
+    rating = (profile_rating or "").lower()
+    if rating == "high":
+        return "Quarterly / enhanced due diligence", timezone.localdate() + timedelta(days=90)
+    if rating in ["moderate", "medium"]:
+        return "Six-month review", timezone.localdate() + timedelta(days=180)
+    return "Annual review", timezone.localdate() + timedelta(days=365)
+
+
+def _profile_rank(profile_rating):
+    return {"Low": 1, "Moderate": 2, "Medium": 2, "High": 3}.get(profile_rating or "", 0)
+
+
+def _previous_customer_profile(account_no="", account_name=""):
+    profiles = CustomerRiskProfile.objects.all()
+    if account_no:
+        match = profiles.filter(account_no=account_no).first()
+        if match:
+            return match
+    if account_name:
+        return profiles.filter(account_name__iexact=account_name).first()
+    return None
+
+
+def _profile_duplicate_context(profile_data):
+    if not profile_data:
+        return None
+    previous = _previous_customer_profile(
+        account_no=profile_data.get("account_no", ""),
+        account_name=profile_data.get("account_name", ""),
+    )
+    if not previous:
+        return None
+    current_rating = profile_data.get("profile_rating", "")
+    movement = "Unchanged"
+    if _profile_rank(current_rating) > _profile_rank(previous.profile_rating):
+        movement = "Worsened"
+    elif _profile_rank(current_rating) < _profile_rank(previous.profile_rating):
+        movement = "Improved"
+    return {
+        "id": previous.id,
+        "previous_rating": previous.profile_rating,
+        "previous_score": previous.average_score,
+        "current_rating": current_rating,
+        "current_score": profile_data.get("average_score"),
+        "movement": movement,
+        "created_at": previous.created_at,
+    }
+
+
 def _uploaded_file_to_text(uploaded_file):
     if not uploaded_file:
         return "", "", ""
@@ -639,6 +689,7 @@ def _reduce_level(level):
 def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source_type="", source_filename=""):
     profile_record = _parse_customer_risk_profile(raw_text, source_type=source_type, source_filename=source_filename)
     if profile_record:
+        profile_record["duplicate_profile"] = _profile_duplicate_context(profile_record.get("customer_profile_data") or {})
         return {
             "area_name": profile_record["area_name"],
             "reporting_period": "",
@@ -730,7 +781,7 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source
     return {"area_name": area_name, "reporting_period": reporting_period, "results": extracted}
 
 
-def _create_risk_from_extracted(result, request, workflow_status):
+def _create_risk_from_extracted(result, request, workflow_status, evidence_file=None):
     risk = RiskAssessment.objects.create(
         reference_id=make_unique_reference_id(result["reference_id"]),
         area_name=result["area_name"],
@@ -753,23 +804,55 @@ def _create_risk_from_extracted(result, request, workflow_status):
     )
     profile_data = result.get("customer_profile_data") or {}
     if profile_data:
-        CustomerRiskProfile.objects.create(
-            risk=risk,
-            account_no=profile_data.get("account_no", ""),
-            account_name=profile_data.get("account_name", ""),
-            profile_rating=profile_data.get("profile_rating", ""),
-            average_score=profile_data.get("average_score"),
-            total_score=profile_data.get("total_score") or 0,
-            determinant_count=profile_data.get("determinant_count") or 0,
-            determinants=profile_data.get("determinants") or [],
-            recommendation=profile_data.get("recommendation", ""),
-            enhanced_due_diligence=profile_data.get("enhanced_due_diligence", ""),
-            confidence_notes=profile_data.get("confidence_notes", ""),
-            source_filename=profile_data.get("source_filename", ""),
-            source_type=profile_data.get("source_type", ""),
-            created_by=request.user,
-        )
+        _create_customer_profile_from_data(profile_data, request, risk=risk, evidence_file=evidence_file)
     return risk
+
+
+def _create_customer_profile_from_data(profile_data, request, risk=None, evidence_file=None):
+    previous = _previous_customer_profile(
+        account_no=profile_data.get("account_no", ""),
+        account_name=profile_data.get("account_name", ""),
+    )
+    profile_rating = profile_data.get("profile_rating", "")
+    movement = "New"
+    if previous:
+        movement = "Unchanged"
+        if _profile_rank(profile_rating) > _profile_rank(previous.profile_rating):
+            movement = "Worsened"
+        elif _profile_rank(profile_rating) < _profile_rank(previous.profile_rating):
+            movement = "Improved"
+    review_frequency, next_review_date = _review_plan_for_rating(profile_rating)
+    profile = CustomerRiskProfile.objects.create(
+        risk=risk,
+        account_no=profile_data.get("account_no", ""),
+        account_name=profile_data.get("account_name", ""),
+        profile_rating=profile_rating,
+        average_score=profile_data.get("average_score"),
+        total_score=profile_data.get("total_score") or 0,
+        determinant_count=profile_data.get("determinant_count") or 0,
+        determinants=profile_data.get("determinants") or [],
+        recommendation=profile_data.get("recommendation", ""),
+        enhanced_due_diligence=profile_data.get("enhanced_due_diligence", ""),
+        confidence_notes=profile_data.get("confidence_notes", ""),
+        source_filename=profile_data.get("source_filename", ""),
+        source_type=profile_data.get("source_type", ""),
+        evidence_file=evidence_file,
+        review_frequency=review_frequency,
+        next_review_date=next_review_date,
+        previous_rating=previous.profile_rating if previous else "",
+        previous_average_score=previous.average_score if previous else None,
+        movement=movement,
+        created_by=request.user,
+    )
+    log_system_event(
+        request,
+        "create",
+        f"Saved customer risk profile for {profile.account_name or profile.account_no or 'customer'} ({profile.profile_rating}).",
+        target=risk,
+        metadata={"profile_id": profile.id, "movement": movement, "next_review_date": str(next_review_date)},
+        area_name="Customer Risk Profile",
+    )
+    return profile
 
 
 # --- LOGIN REDIRECT ---
@@ -1047,6 +1130,23 @@ def customer_profile_detail(request, profile_id):
         Q(account_no=profile.account_no) | Q(account_name=profile.account_name)
     ).exclude(id=profile.id)[:20]
     return render(request, "risks/customer_profile_detail.html", {"profile": profile, "history": history})
+
+
+@login_required
+def customer_profile_report(request, profile_id):
+    profile = get_object_or_404(
+        CustomerRiskProfile.objects.select_related("risk", "created_by"),
+        id=profile_id,
+    )
+    history = CustomerRiskProfile.objects.filter(
+        Q(account_no=profile.account_no) | Q(account_name=profile.account_name)
+    ).exclude(id=profile.id)[:10]
+    return render(request, "risks/customer_profile_report.html", {
+        "profile": profile,
+        "history": history,
+        "generated_at": timezone.now(),
+        "generated_by": request.user,
+    })
 
 
 @login_required
@@ -1481,14 +1581,53 @@ def ai_extract_save_drafts(request):
         source_filename=request.POST.get("source_filename", ""),
     )
     saved_count = 0
+    evidence_file = request.FILES.get("evidence_file")
     for result in extraction["results"]:
         try:
-            _create_risk_from_extracted(result, request, "Draft")
+            _create_risk_from_extracted(result, request, "Draft", evidence_file=evidence_file)
             saved_count += 1
         except Exception:
             continue
 
     return redirect(f"{reverse('dashboard')}?saved={saved_count}")
+
+
+@login_required
+def ai_extract_save_profile_only(request):
+    if request.method != "POST":
+        return redirect("ai-extract")
+
+    raw_text = request.POST.get("raw_text", "").strip()
+    evidence_file = request.FILES.get("evidence_file")
+    source_filename = request.POST.get("source_filename", "")
+    source_type = request.POST.get("source_type", "")
+    if evidence_file and not raw_text:
+        try:
+            file_text, source_filename, source_type = _uploaded_file_to_text(evidence_file)
+            evidence_file.seek(0)
+            raw_text = file_text
+        except Exception:
+            return redirect("ai-extract")
+    if not raw_text:
+        return redirect("ai-extract")
+
+    extraction = _extract_risk_records_from_text(
+        raw_text,
+        skip_zero_occurrence=False,
+        source_type=source_type,
+        source_filename=source_filename,
+    )
+    profile_result = next((item for item in extraction["results"] if item.get("customer_profile_data")), None)
+    if not profile_result:
+        return redirect("ai-extract")
+
+    profile = _create_customer_profile_from_data(
+        profile_result["customer_profile_data"],
+        request,
+        risk=None,
+        evidence_file=evidence_file,
+    )
+    return redirect("customer-profile-detail", profile_id=profile.id)
 
 
 # ========= SAVE & APPROVE =========
@@ -1509,9 +1648,10 @@ def ai_extract_save_and_approve(request):
         source_filename=request.POST.get("source_filename", ""),
     )
     saved_count = 0
+    evidence_file = request.FILES.get("evidence_file")
     for result in extraction["results"]:
         try:
-            _create_risk_from_extracted(result, request, "Approved")
+            _create_risk_from_extracted(result, request, "Approved", evidence_file=evidence_file)
             saved_count += 1
         except Exception:
             continue

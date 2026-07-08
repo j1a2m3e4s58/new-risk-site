@@ -152,6 +152,15 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(
+    os.environ.get(
+        "MEDIA_ROOT",
+        Path(os.environ["RENDER_DISK_PATH"]) / "media"
+        if os.environ.get("RENDER_DISK_PATH")
+        else BASE_DIR / "media",
+    )
+)
 # --- Authentication Settings ---
 # When a user logs in, send them to the dashboard
 LOGIN_REDIRECT_URL = '/'

@@ -333,8 +333,8 @@ class SystemAuditLogAdmin(admin.ModelAdmin):
 
 @admin.register(CustomerRiskProfile)
 class CustomerRiskProfileAdmin(admin.ModelAdmin):
-    list_display = ('created_at', 'account_name', 'account_no', 'profile_rating', 'average_score', 'total_score', 'risk')
-    list_filter = ('profile_rating', 'source_type', 'created_at')
+    list_display = ('created_at', 'account_name', 'account_no', 'profile_rating', 'average_score', 'movement', 'next_review_date', 'risk')
+    list_filter = ('profile_rating', 'movement', 'source_type', 'next_review_date', 'created_at')
     search_fields = ('account_name', 'account_no', 'profile_rating', 'risk__reference_id')
     readonly_fields = (
         'risk',
@@ -350,6 +350,12 @@ class CustomerRiskProfileAdmin(admin.ModelAdmin):
         'confidence_notes',
         'source_filename',
         'source_type',
+        'evidence_file',
+        'review_frequency',
+        'next_review_date',
+        'previous_rating',
+        'previous_average_score',
+        'movement',
         'created_by',
         'created_at',
     )

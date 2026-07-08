@@ -350,21 +350,31 @@
 
                 {% if raw_text %}
                     <div class="btnrow">
-                        <form method="post" action="{% url 'ai-extract-save' %}">
+                        <form method="post" action="{% url 'ai-extract-save' %}" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
                             <input type="hidden" name="source_filename" value="{{ source_filename|default:'' }}">
                             <input type="hidden" name="source_type" value="{{ source_type|default:'' }}">
+                            <input type="file" name="evidence_file" accept=".xlsx,.xlsm,.docx,.pdf,.txt" style="margin:8px 0;">
                             <button type="submit" class="btn-warning">Save as Draft Risks</button>
                             <div class="muted" style="margin-top:6px;">Saves extracted items as [DRAFT] in the risk register.</div>
                         </form>
 
-                        <form method="post" action="{% url 'ai-extract-save-approve' %}">
+                        <form method="post" action="{% url 'ai-extract-save-approve' %}" enctype="multipart/form-data">
                             {% csrf_token %}
                             <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
                             <input type="hidden" name="source_filename" value="{{ source_filename|default:'' }}">
                             <input type="hidden" name="source_type" value="{{ source_type|default:'' }}">
+                            <input type="file" name="evidence_file" accept=".xlsx,.xlsm,.docx,.pdf,.txt" style="margin:8px 0;">
                             <button type="submit" class="btn-success">Save and Approve Now</button>
+                        </form>
+                        <form method="post" action="{% url 'ai-extract-save-profile' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
+                            <input type="hidden" name="source_filename" value="{{ source_filename|default:'' }}">
+                            <input type="hidden" name="source_type" value="{{ source_type|default:'' }}">
+                            <input type="file" name="evidence_file" accept=".xlsx,.xlsm,.docx,.pdf,.txt" style="margin:8px 0;">
+                            <button type="submit" class="btn-primary">Save Profile Only</button>
                         </form>
                     </div>
                 {% endif %}
@@ -417,6 +427,17 @@
                             </div>
                         </div>
                         <div class="result-body">
+                            {% if r.duplicate_profile %}
+                            <div class="field full">
+                                <div class="field-label">Duplicate / History Warning</div>
+                                <div class="field-value">
+                                    Previous profile found:
+                                    <a href="{% url 'customer-profile-detail' r.duplicate_profile.id %}">{{ r.duplicate_profile.previous_rating }} / {{ r.duplicate_profile.previous_score }}</a>.
+                                    New profile is {{ r.duplicate_profile.current_rating }} / {{ r.duplicate_profile.current_score }}.
+                                    Movement: {{ r.duplicate_profile.movement }}.
+                                </div>
+                            </div>
+                            {% endif %}
                             <div class="field full">
                                 <div class="field-label">Risk Description</div>
                                 <div class="field-value">{{ r.risk_description }}</div>
