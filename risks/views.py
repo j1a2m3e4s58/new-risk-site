@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.http import FileResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.utils import timezone
 from django.http import HttpResponse
 from datetime import timedelta
@@ -300,6 +301,356 @@ def default_controls_for_area(area_name):
         return "Transaction monitoring, reporting controls, periodic compliance review"
     return "Standard Controls"
 # ========= SMART_SCORING_END =========
+
+
+CUSTOMER_PROFILE_FACTORS = [
+    ("banking_relationship", "Length of banking relationship", 1),
+    ("kyc_exception", "KYC information exception", 1),
+    ("high_value", "High net worth or high value transaction", 3),
+    ("pep", "Politically exposed person / close associate", 1),
+    ("complex_ownership", "Complex control or ownership structure", 3),
+    ("source_of_funds", "Unclear or undocumented source of funds", 1),
+    ("product_services", "Product and services risk", 3),
+    ("delivery_channel", "Transaction / delivery channel risk", 1),
+    ("location", "Nationality and country of residence", 1),
+    ("watchlist", "Watch list filtering", 1),
+]
+
+
+def _split_extracted_row(line):
+    if "\t" in line:
+        return [p.strip() for p in line.split("\t") if p.strip()]
+    return [p.strip() for p in re.split(r"\s{2,}", line.strip()) if p.strip()]
+
+
+def _clean_ref_part(value):
+    cleaned = re.sub(r"[^A-Z0-9\-]", "", (value or "").upper().replace(" ", "-"))
+    return cleaned[:16] or "GENERAL"
+
+
+def _profile_rating_from_average(average_score):
+    if average_score <= 1.2:
+        return "Low"
+    if average_score <= 2:
+        return "Medium"
+    return "High"
+
+
+def _profile_levels_from_rating(profile_rating):
+    if profile_rating == "High":
+        return "High", "Very High"
+    if profile_rating == "Medium":
+        return "Medium", "High"
+    return "Low", "Medium"
+
+
+def _extract_numeric_weight(parts):
+    for part in reversed(parts):
+        text = str(part).strip()
+        if re.fullmatch(r"[123](?:\.0)?", text):
+            return int(float(text))
+    return None
+
+
+def _weight_from_profile_text(label, value):
+    text = f"{label} {value}".lower()
+
+    if any(k in text for k in ["politically exposed", "pep", "sanction", "watch list match", "watchlist match"]):
+        return 3
+    if any(k in text for k in ["high net worth", "high value", "complex control", "complex ownership", "unclear source", "undocumented source", "source of funds"]):
+        return 3
+    if any(k in text for k in ["0-12", "0 - 12", "less than 12", "new customer"]):
+        return 3
+    if any(k in text for k in ["2-<4", "2 -", "2 years", "3 years", "medium"]):
+        return 2
+    if any(k in text for k in [">5", "more than 5", "ghana", "no match", "low", "current account", "mobile banking", "ussd"]):
+        return 1
+    return 1
+
+
+def _parse_customer_risk_profile(raw_text):
+    lines = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
+    lowered = "\n".join(lines).lower()
+    if "customer risk profile" not in lowered and "risk determinants" not in lowered:
+        return None
+
+    account_no = ""
+    account_name = ""
+    for i, line in enumerate(lines):
+        parts = _split_extracted_row(line)
+        labels = [p.lower().rstrip(":") for p in parts]
+        if "account no" in " ".join(labels) and i + 1 < len(lines):
+            next_parts = _split_extracted_row(lines[i + 1])
+            if next_parts:
+                account_no = next_parts[0]
+            if len(next_parts) > 1:
+                account_name = next_parts[1]
+        if "name of account" in line.lower() and not account_name and len(parts) > 1:
+            account_name = parts[1]
+
+    determinant_rows = []
+    current_category = ""
+    for line in lines:
+        parts = _split_extracted_row(line)
+        if len(parts) < 2:
+            continue
+        joined = " ".join(parts).lower()
+        if any(skip in joined for skip in ["total risk score", "average risk score", "rating", "scale", "prepared by", "reviewed by", "approved by"]):
+            continue
+        if "risk determinants" in joined or "risk variables" in joined:
+            continue
+
+        weight = _extract_numeric_weight(parts)
+        if weight is None:
+            continue
+
+        category = parts[0] if len(parts) >= 3 else current_category
+        variable = parts[1] if len(parts) >= 3 else parts[0]
+        if category:
+            current_category = category
+        category = category or current_category or "Customer"
+        determinant_rows.append({
+            "category": category,
+            "variable": variable,
+            "weight": weight,
+        })
+
+    if not determinant_rows:
+        inferred = []
+        for key, label, default_weight in CUSTOMER_PROFILE_FACTORS:
+            inferred_weight = _weight_from_profile_text(label, raw_text) or default_weight
+            inferred.append({"category": "Customer Risk Profile", "variable": label, "weight": inferred_weight})
+        determinant_rows = inferred
+
+    total_score = sum(row["weight"] for row in determinant_rows)
+    average_score = round(total_score / max(len(determinant_rows), 1), 2)
+    profile_rating = _profile_rating_from_average(average_score)
+    probability, impact = _profile_levels_from_rating(profile_rating)
+    high_factors = [row for row in determinant_rows if row["weight"] >= 3]
+    account_label = account_name or account_no or "Customer"
+    high_factor_text = "; ".join(f"{row['category']}: {row['variable']}" for row in high_factors[:6]) or "No high-weight determinant identified."
+
+    base_ref = f"CRP-{_clean_ref_part(account_label)}"
+    reference_id = make_unique_reference_id(base_ref)
+    rating_label = "Moderate" if profile_rating == "Medium" else profile_rating
+
+    return {
+        "reference_id": reference_id,
+        "area_name": "Customer Risk Profile",
+        "reporting_period": "",
+        "risk_owner": "Compliance Officer",
+        "risk_coordinator_name": "Risk & Compliance Coordinator",
+        "risk_description": f"Customer risk profile for {account_label}: {rating_label} customer risk.",
+        "root_cause": f"Customer profile determinant average score is {average_score} based on {len(determinant_rows)} factor(s).",
+        "trigger": "Customer risk profile assessment indicates elevated customer due diligence exposure.",
+        "consequences": "Potential AML/CFT, KYC, transaction monitoring, reputational, and regulatory exposure if customer risk is not monitored.",
+        "inherent_probability": probability,
+        "inherent_impact": impact,
+        "inherent_rating": "-",
+        "control_descriptions": "Customer due diligence, beneficial ownership verification, watchlist screening, transaction monitoring, enhanced due diligence where required, periodic review.",
+        "control_owner": "Compliance Officer",
+        "residual_probability": probability,
+        "residual_impact": "High" if impact == "Very High" else impact,
+        "residual_rating": "-",
+        "source_kri": "Customer Risk Profile",
+        "source_kri_description": high_factor_text,
+        "source_related_risk": f"Average score {average_score}; profile rating {rating_label}.",
+        "source_process": "Customer due diligence / AML monitoring",
+        "source_occurrence": str(total_score),
+        "customer_profile_score": average_score,
+        "customer_profile_rating": rating_label,
+        "customer_profile_notes": "\n".join(f"{row['category']} | {row['variable']} | Weight {row['weight']}" for row in determinant_rows),
+    }
+
+
+def _likelihood_from_occurrence(value):
+    v = str(value or "").strip().lower()
+
+    if not v:
+        return "Medium"
+    if v.endswith("%"):
+        try:
+            pct = float(v.replace("%", "").strip())
+        except ValueError:
+            pct = 0.0
+        if pct <= 0:
+            return "Very Low"
+        if pct < 5:
+            return "Medium"
+        if pct < 10:
+            return "High"
+        return "Very High"
+
+    if any(x in v for x in ["daily", "per day", "every day", "frequent", "often", "always"]):
+        return "Very High"
+    if any(x in v for x in ["weekly", "per week"]):
+        return "High"
+    if any(x in v for x in ["monthly", "per month"]):
+        return "Medium"
+    if any(x in v for x in ["quarterly", "annually", "annual", "per year"]):
+        return "Low"
+
+    try:
+        n = int(float(re.sub(r"[^0-9.]", "", v)))
+    except ValueError:
+        return "Medium"
+
+    if n <= 0:
+        return "Very Low"
+    if n == 1:
+        return "Low"
+    if 2 <= n <= 3:
+        return "Medium"
+    if 4 <= n <= 9:
+        return "High"
+    return "Very High"
+
+
+def _impact_from_profile_text(text):
+    t = (text or "").lower()
+    very_high = [
+        "money laundering", "aml", "cft", "terrorist financing", "sanction", "pep",
+        "politically exposed", "regulatory penalty", "regulatory breach", "fraud",
+        "identity theft", "data breach", "loss of funds", "unclear source of funds",
+        "undocumented source", "complex ownership", "beneficial owner",
+    ]
+    high = [
+        "high net worth", "high value", "kyc", "watchlist", "watch list", "reputational",
+        "litigation", "legal", "regulatory", "customer due diligence", "enhanced due diligence",
+        "transaction monitoring", "red-flag", "red flag", "mobile banking", "ussd",
+    ]
+    medium = [
+        "documentation", "exception", "process", "delay", "control gap", "monitoring",
+        "reporting", "review", "overdue", "complaint",
+    ]
+    if any(k in t for k in very_high):
+        return "Very High"
+    if any(k in t for k in high):
+        return "High"
+    if any(k in t for k in medium):
+        return "Medium"
+    return "Medium"
+
+
+def _reduce_level(level):
+    order = ["Very Low", "Low", "Medium", "High", "Very High"]
+    if level not in order:
+        level = "Medium"
+    return order[max(order.index(level) - 1, 0)]
+
+
+def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False):
+    profile_record = _parse_customer_risk_profile(raw_text)
+    if profile_record:
+        return {
+            "area_name": profile_record["area_name"],
+            "reporting_period": "",
+            "results": [profile_record],
+        }
+
+    lines = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
+    area_name = ""
+    reporting_period = ""
+
+    for ln in lines[:5]:
+        if "Reporting Period:" in ln:
+            left, right = ln.split("Reporting Period:", 1)
+            area_name = left.strip()
+            reporting_period = right.strip()
+            break
+    if not area_name and lines:
+        area_name = lines[0].strip()
+
+    header_idx = -1
+    for i, ln in enumerate(lines):
+        header_text = ln.lower()
+        if "key risk indicator" in header_text or ("kri description" in header_text and "related risk" in header_text):
+            header_idx = i
+            break
+
+    data_lines = lines[header_idx + 1:] if header_idx != -1 and header_idx + 1 < len(lines) else lines[1:]
+    extracted = []
+    counter = 1
+
+    for ln in data_lines:
+        row_text = ln.lower()
+        if "key risk indicator" in row_text or ("kri description" in row_text and "related risk" in row_text):
+            continue
+
+        parts = _split_extracted_row(ln)
+        if len(parts) < 3:
+            continue
+
+        kri = parts[0] if len(parts) >= 1 else ""
+        kri_desc = parts[1] if len(parts) >= 2 else ""
+        related_risk = parts[2] if len(parts) >= 3 else ""
+        process = parts[3] if len(parts) >= 4 else ""
+        occurrence = parts[4] if len(parts) >= 5 else ""
+        combined = " ".join([kri, kri_desc, related_risk, process, occurrence])
+
+        if skip_zero_occurrence and is_zero_occurrence(occurrence):
+            continue
+
+        base_ref = f"RISK-{_clean_ref_part(area_name)}-{counter:03d}"
+        reference_id = make_unique_reference_id(base_ref)
+        prob = _likelihood_from_occurrence(occurrence)
+        impact = _impact_from_profile_text(combined)
+        residual_prob = _reduce_level(prob) if not is_zero_occurrence(occurrence) else prob
+        residual_impact = _reduce_level(impact) if impact in ["High", "Very High"] else impact
+
+        extracted.append({
+            "reference_id": reference_id,
+            "area_name": area_name,
+            "reporting_period": reporting_period,
+            "risk_owner": suggest_risk_owner(area_name),
+            "risk_coordinator_name": "Risk & Compliance Coordinator",
+            "risk_description": related_risk.strip() or kri.strip() or "TBD",
+            "root_cause": kri_desc.strip(),
+            "trigger": f"When {kri.strip().lower()} happens or is detected." if kri.strip() else "",
+            "consequences": related_risk.strip(),
+            "inherent_probability": prob,
+            "inherent_impact": impact,
+            "inherent_rating": "-",
+            "control_descriptions": default_controls_for_area(area_name),
+            "control_owner": suggest_risk_owner(area_name),
+            "residual_probability": residual_prob,
+            "residual_impact": residual_impact,
+            "residual_rating": "-",
+            "source_kri": kri,
+            "source_kri_description": kri_desc,
+            "source_related_risk": related_risk,
+            "source_process": process,
+            "source_occurrence": occurrence,
+            "customer_profile_score": None,
+            "customer_profile_rating": "",
+            "customer_profile_notes": "",
+        })
+        counter += 1
+
+    return {"area_name": area_name, "reporting_period": reporting_period, "results": extracted}
+
+
+def _create_risk_from_extracted(result, request, workflow_status):
+    return RiskAssessment.objects.create(
+        reference_id=make_unique_reference_id(result["reference_id"]),
+        area_name=result["area_name"],
+        description=("[DRAFT] " if workflow_status == "Draft" else "") + result["risk_description"],
+        caused_by=result["root_cause"],
+        consequences=result["consequences"],
+        customer_profile_score=result.get("customer_profile_score"),
+        customer_profile_rating=result.get("customer_profile_rating", ""),
+        customer_profile_notes=result.get("customer_profile_notes", ""),
+        risk_owner=result["risk_owner"],
+        risk_coordinator_name=result.get("risk_coordinator_name", ""),
+        inherent_probability=result["inherent_probability"],
+        inherent_impact=result["inherent_impact"],
+        residual_probability=result["residual_probability"],
+        residual_impact=result["residual_impact"],
+        workflow_status=workflow_status,
+        controls=result["control_descriptions"],
+        control_owner=result["control_owner"],
+        updated_by=request.user,
+    )
 
 
 # --- LOGIN REDIRECT ---
@@ -926,90 +1277,6 @@ def official_report(request):
 # ========= AI EXTRACT (Preview) =========
 @login_required
 def ai_extract_risks(request):
-    def _split_row(line):
-        if "\t" in line:
-            return [p.strip() for p in line.split("\t") if p.strip()]
-        return [p.strip() for p in re.split(r"\s{2,}", line.strip()) if p.strip()]
-
-    def _parse_pasted_text(raw_text):
-        lines = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-
-        area_name = ""
-        reporting_period = ""
-
-        for ln in lines[:5]:
-            if "Reporting Period:" in ln:
-                left, right = ln.split("Reporting Period:", 1)
-                area_name = left.strip()
-                reporting_period = right.strip()
-                break
-        if not area_name and lines:
-            area_name = lines[0].strip()
-
-        header_idx = -1
-        for i, ln in enumerate(lines):
-            if "Key Risk Indicator" in ln and ("No Occurrence" in ln or "Number of Occurrance" in ln or "No Occurrence" in ln):
-                header_idx = i
-                break
-        if header_idx == -1:
-            for i, ln in enumerate(lines):
-                if "Key Risk Indicator" in ln and "KRI Description" in ln:
-                    header_idx = i
-                    break
-
-        data_lines = lines[header_idx + 1:] if header_idx != -1 and header_idx + 1 < len(lines) else lines[1:]
-
-        extracted = []
-        counter = 1
-       
-        for ln in data_lines:
-            if "Key Risk Indicator" in ln:
-                continue
-
-            parts = _split_row(ln)
-            if len(parts) < 4:
-                continue
-
-            kri = parts[0] if len(parts) >= 1 else ""
-            kri_desc = parts[1] if len(parts) >= 2 else ""
-            related_risk = parts[2] if len(parts) >= 3 else ""
-            process = parts[3] if len(parts) >= 4 else ""
-            occurrence = parts[4] if len(parts) >= 5 else ""
-
-            base_ref = f"RISK-{area_name[:12].upper().replace(' ', '-')}-{counter:03d}"
-            base_ref = re.sub(r"[^A-Z0-9\-]", "", base_ref)
-            reference_id = make_unique_reference_id(base_ref)
-
-            prob = score_probability_from_occurrence(occurrence)
-            impact = score_impact_from_text(related_risk + " " + process)
-
-            extracted.append({
-                "reference_id": reference_id,
-                "area_name": area_name,
-                "reporting_period": reporting_period,
-                "risk_owner": suggest_risk_owner(area_name),
-                "risk_description": (related_risk.strip() or kri.strip() or "TBD"),
-                "root_cause": kri_desc.strip(),
-                "trigger": f"When {kri.strip().lower()} happens or is detected." if kri.strip() else "",
-                "consequences": related_risk.strip(),
-                "inherent_probability": prob,
-                "inherent_impact": impact,
-                "inherent_rating": "-",
-                "control_descriptions": default_controls_for_area(area_name),
-                "control_owner": suggest_risk_owner(area_name),
-                "residual_probability": prob,
-                "residual_impact": impact,
-                "residual_rating": "-",
-                "source_kri": kri,
-                "source_kri_description": kri_desc,
-                "source_related_risk": related_risk,
-                "source_process": process,
-                "source_occurrence": occurrence,
-            })
-            counter += 1
-
-        return area_name, reporting_period, extracted
-
     context = {"raw_text": "", "area_name": "", "reporting_period": "", "results": [], "error": ""}
 
     if request.method == "POST":
@@ -1019,11 +1286,11 @@ def ai_extract_risks(request):
         if not raw_text.strip():
             context["error"] = "Please paste your KRI table text first."
         else:
-            area_name, reporting_period, results = _parse_pasted_text(raw_text)
-            context["area_name"] = area_name
-            context["reporting_period"] = reporting_period
-            context["results"] = results
-            if not results:
+            extraction = _extract_risk_records_from_text(raw_text)
+            context["area_name"] = extraction["area_name"]
+            context["reporting_period"] = extraction["reporting_period"]
+            context["results"] = extraction["results"]
+            if not extraction["results"]:
                 context["error"] = "I could not detect any table rows. Make sure you pasted the KRI table with rows."
 
     return render(request, "risks/ai_extract.html", context)
@@ -1039,92 +1306,16 @@ def ai_extract_save_drafts(request):
     if not raw_text:
         return redirect("ai-extract")
 
-    def _split_row(line):
-        if "\t" in line:
-            return [p.strip() for p in line.split("\t") if p.strip()]
-        return [p.strip() for p in re.split(r"\s{2,}", line.strip()) if p.strip()]
-
-    def _make_unique_reference_id(base_ref):
-        ref = base_ref
-        bump = 1
-        while RiskAssessment.objects.filter(reference_id=ref).exists():
-            ref = f"{base_ref}-{bump}"
-            bump += 1
-        return ref
-
-    lines = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-
-    area_name = ""
-    for ln in lines[:5]:
-        if "Reporting Period:" in ln:
-            left, _right = ln.split("Reporting Period:", 1)
-            area_name = left.strip()
-            break
-    if not area_name and lines:
-        area_name = lines[0].strip()
-
-    header_idx = -1
-    for i, ln in enumerate(lines):
-        if "Key Risk Indicator" in ln and "KRI Description" in ln:
-            header_idx = i
-            break
-
-    data_lines = lines[header_idx + 1:] if header_idx != -1 and header_idx + 1 < len(lines) else lines[1:]
-
-    counter = 1
-    for ln in data_lines:
-        parts = _split_row(ln)
-        if len(parts) < 4:
-            continue
-
-        kri = parts[0] if len(parts) >= 1 else ""
-        kri_desc = parts[1] if len(parts) >= 2 else ""
-        related_risk = parts[2] if len(parts) >= 3 else ""
-        occurrence = parts[4] if len(parts) >= 5 else ""
-        kri = parts[0] if len(parts) >= 1 else ""
-        kri_desc = parts[1] if len(parts) >= 2 else ""
-        related_risk = parts[2] if len(parts) >= 3 else ""
-        process = parts[3] if len(parts) >= 4 else ""
-        occ = parts[4] if len(parts) >= 5 else ""
-
-        # ===== SKIP ZERO OCCURRENCE RISKS =====
-        if is_zero_occurrence(occ):
-            continue
-        # =====================================
-
-
-        base_ref = f"RISK-{area_name[:12].upper().replace(' ', '-')}-{counter:03d}"
-        base_ref = re.sub(r"[^A-Z0-9\-]", "", base_ref)
-        reference_id = _make_unique_reference_id(base_ref)
-
-        prob = score_probability_from_occurrence(occurrence)
-        impact = score_impact_from_text(related_risk)
-
-        description_text = "[DRAFT] " + (related_risk.strip() or kri.strip() or "TBD")
-
+    extraction = _extract_risk_records_from_text(raw_text, skip_zero_occurrence=True)
+    saved_count = 0
+    for result in extraction["results"]:
         try:
-            RiskAssessment.objects.create(
-                reference_id=make_unique_reference_id(f"RISK-{area_name[:12].upper().replace(' ', '-')}-{counter:03d}"),
-                area_name=area_name,
-                description=description_text,
-                caused_by=kri_desc.strip(),
-                consequences=related_risk.strip(),
-                risk_owner=suggest_risk_owner(area_name),
-                inherent_probability=prob,
-                inherent_impact=impact,
-                residual_probability=prob,
-                residual_impact=impact,
-                workflow_status='Draft',
-                controls="Maker-checker, recovery tracking, escalation matrix, legal oversight",
-                control_owner=suggest_risk_owner(area_name),
-                updated_by=request.user
-            )
+            _create_risk_from_extracted(result, request, "Draft")
+            saved_count += 1
         except Exception:
-            pass
+            continue
 
-        counter += 1
-
-    return redirect("dashboard")
+    return redirect(f"{reverse('dashboard')}?saved={saved_count}")
 
 
 # ========= SAVE & APPROVE =========
@@ -1137,6 +1328,17 @@ def ai_extract_save_and_approve(request):
     raw_text = request.POST.get("raw_text", "")
     if not raw_text or not raw_text.strip():
         return redirect("ai-extract")
+
+    extraction = _extract_risk_records_from_text(raw_text, skip_zero_occurrence=True)
+    saved_count = 0
+    for result in extraction["results"]:
+        try:
+            _create_risk_from_extracted(result, request, "Approved")
+            saved_count += 1
+        except Exception:
+            continue
+
+    return redirect(f"{reverse('dashboard')}?saved={saved_count}")
 
     import re
 

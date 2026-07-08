@@ -64,6 +64,9 @@ class RiskAssessment(models.Model):
     # --- NEW SEPARATE FIELDS ---
     caused_by = models.TextField(verbose_name="Root Cause", blank=True, default="", help_text="What triggers this risk?")
     consequences = models.TextField(verbose_name="Consequences", blank=True, default="", help_text="What happens if this risk occurs?")
+    customer_profile_score = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True)
+    customer_profile_rating = models.CharField(max_length=20, blank=True, default="")
+    customer_profile_notes = models.TextField(blank=True, default="")
 
     risk_owner = models.CharField(max_length=100, help_text="Person responsible for this risk")
     workflow_status = models.CharField(

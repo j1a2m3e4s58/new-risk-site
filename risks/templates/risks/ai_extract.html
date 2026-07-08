@@ -439,10 +439,22 @@
                                 <div class="field-label">Residual Risk</div>
                                 <div class="field-value">{{ r.residual_probability }} / {{ r.residual_impact }} / {{ r.residual_rating }}</div>
                             </div>
+                            {% if r.customer_profile_rating %}
+                            <div class="field">
+                                <div class="field-label">Customer Profile Rating</div>
+                                <div class="field-value">{{ r.customer_profile_rating }}{% if r.customer_profile_score %} / Score {{ r.customer_profile_score }}{% endif %}</div>
+                            </div>
+                            {% endif %}
                             <div class="field full">
                                 <div class="field-label">Controls</div>
                                 <div class="field-value">{{ r.control_descriptions }}</div>
                             </div>
+                            {% if r.customer_profile_notes %}
+                            <div class="field full">
+                                <div class="field-label">Profile Determinants</div>
+                                <div class="field-value">{{ r.customer_profile_notes|linebreaksbr }}</div>
+                            </div>
+                            {% endif %}
                         </div>
                     </article>
                 {% endfor %}

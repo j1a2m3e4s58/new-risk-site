@@ -26,6 +26,10 @@
         </div>
         <p><strong>Root Cause:</strong><br>{{ risk.caused_by|default:"Not recorded" }}</p>
         <p><strong>Consequences:</strong><br>{{ risk.consequences|default:"Not recorded" }}</p>
+        {% if risk.customer_profile_rating %}
+            <p><strong>Customer Profile:</strong><br>{{ risk.customer_profile_rating }}{% if risk.customer_profile_score %} risk profile score {{ risk.customer_profile_score }}{% endif %}</p>
+            {% if risk.customer_profile_notes %}<p><strong>Profile Determinants:</strong><br>{{ risk.customer_profile_notes|linebreaksbr }}</p>{% endif %}
+        {% endif %}
         <p><strong>Controls:</strong><br>{{ risk.controls|default:"No controls recorded" }}</p>
     </article>
     <article class="panel">
