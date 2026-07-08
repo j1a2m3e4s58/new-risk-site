@@ -47,6 +47,9 @@
             grid-template-columns: auto minmax(0, 1fr) auto;
             align-items: center;
             gap: 16px;
+            position: relative;
+            z-index: 1000;
+            overflow: visible;
         }
 
         .brand-logo {
@@ -334,6 +337,10 @@
         }
         .notification-menu {
             position: relative;
+            z-index: 1100;
+        }
+        .notification-menu[open] {
+            z-index: 1200;
         }
         .notification-menu summary {
             list-style: none;
@@ -371,7 +378,7 @@
             background: linear-gradient(135deg, rgba(19,23,34,0.94), rgba(11,15,22,0.88));
             box-shadow: var(--glass-shadow);
             padding: 12px;
-            z-index: 20;
+            z-index: 1300;
             backdrop-filter: blur(18px) saturate(130%);
             -webkit-backdrop-filter: blur(18px) saturate(130%);
         }
