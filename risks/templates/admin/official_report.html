@@ -234,7 +234,7 @@
         <tr>
             <td style="font-weight:bold;">{{ risk.reference_id }}</td>
             <td>{{ risk.area_name }}</td>
-            <td>{{ risk.description }}</td>
+            <td>{{ risk.report_description }}</td>
 
             <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability|level_label }}</td>
             <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact|level_label }}</td>
@@ -242,7 +242,7 @@
             <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
 
             <td>{{ risk.control_description|default:"Standard Controls" }}</td>
-            <td>{{ risk.mitigation_action|default:"mitigate" }}</td>
+            <td>{{ risk.risk_treatment }}</td>
             <td>{{ risk.risk_owner }}</td>
             <td>{{ risk.risk_coordinator_name|default:"Risk & compliance officer" }}</td>
             <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating|level_label }}</td>

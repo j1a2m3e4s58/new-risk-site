@@ -258,6 +258,14 @@ class RiskAssessment(models.Model):
 
         # ========= AUTO_FILL_PROPERTIES_START =========
     @property
+    def report_description(self):
+        return (self.description or "").replace("[DRAFT] ", "", 1).strip()
+
+    @property
+    def risk_treatment(self):
+        return (self.mitigation_action or "mitigate").strip()
+
+    @property
     def control_description(self):
         # official_report.html expects this name
         return self.controls or "Standard Controls"

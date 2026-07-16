@@ -241,28 +241,30 @@ def _build_assurance_cockpit(risks, incidents, departments):
 def suggest_risk_owner(area_name):
     a = (area_name or "").strip().lower()
 
-    if "microfinance" in a:
-        return "Head of Microfinance"
-    if "credit" in a:
-        return "Head of Credit"
-    if "finance" in a:
-        return "Head of Finance"
+    if "marketing" in a or "business development" in a or "sales" in a:
+        return "Marketing Manager"
+    if "microfinance" in a or "susu" in a:
+        return "Microfinance Manager"
+    if "credit" in a or "loan" in a or "recovery" in a:
+        return "Credit Manager"
+    if "finance" in a or "account" in a:
+        return "Finance Manager"
     if a == "it" or " ict" in f" {a} " or " it " in f" {a} " or "information technology" in a:
-        return "Head of IT"
-    if "operations" in a or "teller" in a or "customer service" in a:
-        return "Head of Operations"
-    if "compliance" in a:
-        return "Compliance Officer"
+        return "IT Manager"
+    if "operations" in a or "teller" in a or "customer service" in a or "branch" in a:
+        return "Operations Manager"
+    if "compliance" in a or "aml" in a:
+        return "Compliance Manager"
     if "audit" in a:
         return "Internal Auditor"
     if "treasury" in a:
         return "Treasury Manager"
     if "hr" in a or "human resource" in a:
-        return "Head of HR"
+        return "Human Resource Manager"
     if "legal" in a:
         return "Legal Officer"
 
-    return "Department Head"
+    return "Department Manager"
 # ========= RISK_OWNER_SUGGEST_END =========
 
 
@@ -316,15 +318,53 @@ def score_impact_from_text(related_risk_text):
 
 def default_controls_for_area(area_name):
     a = (area_name or "").lower()
+    if "marketing" in a or "business development" in a or "sales" in a:
+        return "Approved marketing scripts, product disclosure review, complaint tracking, campaign approval, and management supervision"
     if "teller" in a or "customer service" in a or "operations" in a:
-        return "Maker-checker, daily call-over, cash limits, CCTV monitoring, ID verification"
-    if "credit" in a or "microfinance" in a:
-        return "Approval workflow controls, KYC verification, monitoring visits, collections follow-up"
+        return "Maker-checker review, daily call-over, cash limits, CCTV monitoring, and customer ID verification"
+    if "credit" in a or "loan" in a or "microfinance" in a:
+        return "Credit approval workflow, KYC verification, monitoring visits, arrears follow-up, and exception reporting"
     if "it" in a or "ict" in a:
-        return "Access control, system monitoring, change management, alerting, backups"
+        return "Access control, system monitoring, change management, alerting, backups, and privileged access review"
+    if "finance" in a or "account" in a:
+        return "Reconciliation review, budget approval, payment authorization, supporting documentation checks, and management review"
     if "compliance" in a or "aml" in a:
-        return "Transaction monitoring, reporting controls, periodic compliance review"
-    return "Standard Controls"
+        return "Transaction monitoring, regulatory reporting controls, KYC review, screening, and periodic compliance testing"
+    return "Documented procedure, supervisory review, exception tracking, and periodic management monitoring"
+
+
+def default_treatment_for_area(area_name):
+    a = (area_name or "").lower()
+    if "marketing" in a or "business development" in a or "sales" in a:
+        return "Review product communication, correct customer-facing information, resolve complaints, and obtain management approval before further publication"
+    if "credit" in a or "loan" in a or "microfinance" in a:
+        return "Review affected accounts, correct exceptions, strengthen approval checks, and monitor recovery or customer impact"
+    if "it" in a or "ict" in a:
+        return "Investigate root cause, restrict access where needed, apply corrective change, test recovery, and monitor system alerts"
+    if "finance" in a or "account" in a:
+        return "Correct records, reconcile differences, obtain approval, document evidence, and report exceptions to management"
+    if "compliance" in a or "aml" in a:
+        return "Review regulatory obligation, complete required filing or remediation, document evidence, and escalate unresolved exceptions"
+    return "Mitigate the exposure, assign accountable owner, document corrective action, and monitor completion"
+
+
+def suggest_risk_coordinator(area_name, risk_text=""):
+    combined = f"{area_name} {risk_text}".lower()
+    if any(k in combined for k in ["marketing", "campaign", "advert", "product", "service", "complaint", "customer"]):
+        return "Customer Experience / Marketing Coordinator"
+    if any(k in combined for k in ["aml", "cft", "sanction", "regulatory", "bog", "fic", "compliance"]):
+        return "Compliance Officer"
+    if any(k in combined for k in ["fraud", "theft", "misappropriation", "robbery"]):
+        return "Fraud & Investigations Officer"
+    if any(k in combined for k in ["system", "downtime", "cyber", "access", "data", "information security"]):
+        return "IT Support Lead"
+    if any(k in combined for k in ["liquidity", "clearing", "settlement", "treasury"]):
+        return "Treasury Coordinator"
+    if any(k in combined for k in ["credit", "loan", "arrears", "recovery"]):
+        return "Credit Risk Coordinator"
+    if any(k in combined for k in ["staff", "training", "competency", "hr"]):
+        return "HR Coordinator"
+    return "Risk & Compliance Coordinator"
 # ========= SMART_SCORING_END =========
 
 
@@ -594,7 +634,7 @@ def _parse_customer_risk_profile(raw_text, source_type="", source_filename=""):
         "area_name": "Customer Risk Profile",
         "reporting_period": "",
         "risk_owner": "Compliance Officer",
-        "risk_coordinator_name": "Risk & Compliance Coordinator",
+        "risk_coordinator_name": suggest_risk_coordinator("Customer Risk Profile", high_factor_text),
         "risk_description": f"Customer risk profile for {account_label}: {rating_label} customer risk.",
         "root_cause": f"Customer profile determinant average score is {average_score} based on {len(determinant_rows)} factor(s).",
         "trigger": "Customer risk profile assessment indicates elevated customer due diligence exposure.",
@@ -775,7 +815,7 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source
             "area_name": area_name,
             "reporting_period": reporting_period,
             "risk_owner": suggest_risk_owner(area_name),
-            "risk_coordinator_name": "Risk & Compliance Coordinator",
+            "risk_coordinator_name": suggest_risk_coordinator(area_name, combined),
             "risk_description": related_risk.strip() or kri.strip() or "TBD",
             "root_cause": kri_desc.strip(),
             "trigger": f"When {kri.strip().lower()} happens or is detected." if kri.strip() else "",
@@ -797,7 +837,7 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source
             "customer_profile_rating": "",
             "customer_profile_notes": "",
             "customer_profile_data": None,
-            "recommendation": "Review extracted risk and confirm controls, owner, and action plan before approval.",
+            "recommendation": default_treatment_for_area(area_name),
             "confidence_notes": "KRI extraction used occurrence text, risk keywords, and process context to estimate likelihood and impact.",
         })
         counter += 1
@@ -1799,19 +1839,6 @@ def ai_extract_save_and_approve(request):
 
     data_lines = lines[header_idx + 1:] if header_idx != -1 else lines[1:]
 
-    OWNER_MAP = {
-        "COMPLIANCE": "Compliance Manager",
-        "AML": "Compliance Manager",
-        "AUDIT": "Internal Auditor",
-        "CREDIT": "Head of Credit",
-        "LOAN RECOVERY": "Head of Credit",
-        "SUSU": "Head of Operations",
-        "OPERATIONAL": "Head of Operations",
-        "IT": "Head of IT",
-        "FINANCE": "Head of Finance",
-        "TREASURY": "Head of Treasury",
-    }
-
     # ========= COORDINATOR_MAP_START =========
     COORDINATOR_MAP = {
         # Compliance / AML
@@ -1841,8 +1868,12 @@ def ai_extract_save_and_approve(request):
         "clearing": "Treasury Coordinator",
         "settlement": "Treasury Coordinator",
 
-        # Customer / service
+        # Marketing / customer / service
+        "marketing": "Marketing Coordinator",
+        "campaign": "Marketing Coordinator",
+        "advert": "Marketing Coordinator",
         "complaint": "Customer Service Coordinator",
+        "customer": "Customer Service Coordinator",
         "reputational": "Customer Service Coordinator",
 
         # HR / people
@@ -1873,21 +1904,13 @@ def ai_extract_save_and_approve(request):
         occ = parts[4] if len(parts) >= 5 else ""
 
         # ========= OWNER_SELECT_START =========
-        owner = "Department Head"
-        for k, v in OWNER_MAP.items():
-            if k in area_name.upper():
-                owner = v
-                break
+        owner = suggest_risk_owner(area_name)
         # ========= OWNER_SELECT_END =========
 
         # ========= COORDINATOR_SELECT_START =========
         combined_text = f"{kri} {kri_desc} {related_risk} {process}".lower()
 
-        coordinator = COORDINATOR_MAP.get("__default__", "Risk Coordinator")
-        for key, coord_name in COORDINATOR_MAP.items():
-            if key != "__default__" and key in combined_text:
-                coordinator = coord_name
-                break
+        coordinator = suggest_risk_coordinator(area_name, combined_text)
         # ========= COORDINATOR_SELECT_END =========
 
         # (then continue with your skip-zero check, scoring, and create())
@@ -1923,7 +1946,7 @@ def ai_extract_save_and_approve(request):
                 residual_probability=residual_prob,
                 residual_impact=residual_impact,
                 workflow_status='Approved',
-                controls="Standard Controls",
+                controls=default_controls_for_area(area_name),
                 control_owner=owner,
                 updated_by=request.user
             )
