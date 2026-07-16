@@ -316,10 +316,9 @@
         .matrix-table th { font-size: 0.72rem; text-align: center; color: var(--muted); font-weight: normal; }
         .matrix-table td { width: 50px; height: 40px; text-align: center; vertical-align: middle; border-radius: 0; color: white; font-weight: bold; font-size: 1rem; border: 1px solid rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
 
-        .bg-critical { background-color: #d32f2f; color: white; }
-        .bg-severe { background-color: #f57c00; color: white; }
-        .bg-moderate { background-color: #fbc02d; color: #111 !important; }
-        .bg-sustainable { background-color: #388e3c; color: white; }
+        .bg-high { background-color: #e53935; color: white; }
+        .bg-medium { background-color: #fb8c00; color: #111 !important; }
+        .bg-low { background-color: #00b050; color: white; }
         .legend-badge { display: inline-block; padding: 6px 10px; border-radius: 0; font-size: 0.75rem; font-weight: bold; margin: 0 2px; }
 
         .table { --bs-table-bg: transparent; --bs-table-color: var(--text); --bs-table-border-color: var(--line); color: var(--text); }
@@ -648,7 +647,7 @@
 
                 <div class="metric-strip">
                     <span class="metric-pill"><i class="fas fa-layer-group"></i> Total Risks: {{ total_risks }}</span>
-                    <span class="metric-pill danger"><i class="fas fa-triangle-exclamation"></i> Critical: {{ critical_risks }}</span>
+                    <span class="metric-pill danger"><i class="fas fa-triangle-exclamation"></i> High: {{ high_risks }}</span>
                     <span class="metric-pill danger"><i class="fas fa-arrow-up-right-dots"></i> Escalated: {{ escalated_risks }}</span>
                     <span class="metric-pill info"><i class="fas fa-list-check"></i> Open Actions: {{ open_actions }}</span>
                     <span class="metric-pill warning"><i class="fas fa-clock"></i> Overdue: {{ overdue_actions }}</span>
@@ -861,8 +860,8 @@
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-lg col-md-6">
-                    <div class="fw-bold text-danger mb-2">Critical Residual</div>
-                    {% for risk in early_warnings.critical %}
+                    <div class="fw-bold text-danger mb-2">High Residual</div>
+                    {% for risk in early_warnings.high %}
                         <div class="small mb-1">{{ risk.reference_id }} - {{ risk.area_name|default:"Unspecified" }}</div>
                     {% empty %}
                         <div class="small text-muted">None</div>
@@ -987,7 +986,7 @@
         </div>
     </div>
 
-    <!-- (Heatmap cards stay same as your last working version; unchanged) -->
+    <!-- Three-band bank heatmap -->
     <div class="row g-4 justify-content-center">
 
         <div class="col-lg-4 col-md-6">
@@ -995,75 +994,50 @@
                 <div class="card-header text-primary border-primary">1. Master Risk Legend</div>
                 <div class="card-body text-center">
                     <div class="matrix-container">
-                        <div class="y-axis-label">PROBABILITY</div>
+                        <div class="y-axis-label">LIKELIHOOD</div>
                         <div>
                             <table class="matrix-table">
-                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
-                                <tr><th class="text-end pe-1">VH</th><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-critical"></td><td class="bg-critical"></td><td class="bg-critical"></td></tr>
-                                <tr><th class="text-end pe-1">H</th><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-severe"></td><td class="bg-critical"></td><td class="bg-critical"></td></tr>
-                                <tr><th class="text-end pe-1">Mod</th><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td><td class="bg-severe"></td><td class="bg-critical"></td></tr>
-                                <tr><th class="text-end pe-1">L</th><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td><td class="bg-severe"></td></tr>
-                                <tr><th class="text-end pe-1">VL</th><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-sustainable"></td><td class="bg-moderate"></td><td class="bg-moderate"></td></tr>
+                                <tr><th></th><th>L</th><th>M</th><th>H</th></tr>
+                                <tr><th class="text-end pe-1">H</th><td class="bg-medium"></td><td class="bg-medium"></td><td class="bg-high"></td></tr>
+                                <tr><th class="text-end pe-1">M</th><td class="bg-low"></td><td class="bg-medium"></td><td class="bg-medium"></td></tr>
+                                <tr><th class="text-end pe-1">L</th><td class="bg-low"></td><td class="bg-low"></td><td class="bg-medium"></td></tr>
                             </table>
                             <div class="x-axis-label">IMPACT</div>
                         </div>
                     </div>
 
                     <div class="mt-4 border-top pt-3">
-                        <span class="legend-badge bg-critical">Critical</span>
-                        <span class="legend-badge bg-severe">Severe</span>
-                        <span class="legend-badge bg-moderate">Moderate</span>
-                        <span class="legend-badge bg-sustainable">Sustainable</span>
+                        <span class="legend-badge bg-high">High</span>
+                        <span class="legend-badge bg-medium">Medium</span>
+                        <span class="legend-badge bg-low">Low</span>
                     </div>
-
                 </div>
             </div>
         </div>
 
-        <!-- Inherent -->
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
                 <div class="card-header text-danger border-danger">2. Inherent Risk (Before)</div>
                 <div class="card-body">
                     <div class="matrix-container">
-                        <div class="y-axis-label">PROBABILITY</div>
+                        <div class="y-axis-label">LIKELIHOOD</div>
                         <div>
                             <table class="matrix-table">
-                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
-                                <tr><th class="text-end pe-1">VH</th>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very High'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Very High'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Very High'|get_item:'Very High'|default:'' }}</td>
-                                </tr>
+                                <tr><th></th><th>L</th><th>M</th><th>H</th></tr>
                                 <tr><th class="text-end pe-1">H</th>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'High'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ inherent_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ inherent_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'High'|get_item:'Very High'|default:'' }}</td>
+                                    <td class="bg-medium">{{ inherent_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-medium">{{ inherent_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-high">{{ inherent_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
                                 </tr>
-                                <tr><th class="text-end pe-1">Mod</th>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Medium'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ inherent_matrix|get_item:'Medium'|get_item:'Very High'|default:'' }}</td>
+                                <tr><th class="text-end pe-1">M</th>
+                                    <td class="bg-low">{{ inherent_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-medium">{{ inherent_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-medium">{{ inherent_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
                                 </tr>
                                 <tr><th class="text-end pe-1">L</th>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Low'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-severe">{{ inherent_matrix|get_item:'Low'|get_item:'Very High'|default:'' }}</td>
-                                </tr>
-                                <tr><th class="text-end pe-1">VL</th>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ inherent_matrix|get_item:'Very Low'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very Low'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ inherent_matrix|get_item:'Very Low'|get_item:'Very High'|default:'' }}</td>
+                                    <td class="bg-low">{{ inherent_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-low">{{ inherent_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-medium">{{ inherent_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
                                 </tr>
                             </table>
                             <div class="x-axis-label">IMPACT</div>
@@ -1073,50 +1047,29 @@
             </div>
         </div>
 
-        <!-- Residual -->
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
                 <div class="card-header text-success border-success">3. Residual Risk (After)</div>
                 <div class="card-body">
                     <div class="matrix-container">
-                        <div class="y-axis-label">PROBABILITY</div>
+                        <div class="y-axis-label">LIKELIHOOD</div>
                         <div>
                             <table class="matrix-table">
-                                <tr><th></th><th>VL</th><th>L</th><th>Mod</th><th>H</th><th>VH</th></tr>
-                                <tr><th class="text-end pe-1">VH</th>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very High'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ residual_matrix|get_item:'Very High'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'Very High'|get_item:'Very High'|default:'' }}</td>
-                                </tr>
+                                <tr><th></th><th>L</th><th>M</th><th>H</th></tr>
                                 <tr><th class="text-end pe-1">H</th>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'High'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ residual_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-severe">{{ residual_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'High'|get_item:'Very High'|default:'' }}</td>
+                                    <td class="bg-medium">{{ residual_matrix|get_item:'High'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-medium">{{ residual_matrix|get_item:'High'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-high">{{ residual_matrix|get_item:'High'|get_item:'High'|default:'' }}</td>
                                 </tr>
-                                <tr><th class="text-end pe-1">Mod</th>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Medium'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-severe">{{ residual_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-critical">{{ residual_matrix|get_item:'Medium'|get_item:'Very High'|default:'' }}</td>
+                                <tr><th class="text-end pe-1">M</th>
+                                    <td class="bg-low">{{ residual_matrix|get_item:'Medium'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-medium">{{ residual_matrix|get_item:'Medium'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-medium">{{ residual_matrix|get_item:'Medium'|get_item:'High'|default:'' }}</td>
                                 </tr>
                                 <tr><th class="text-end pe-1">L</th>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Low'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-severe">{{ residual_matrix|get_item:'Low'|get_item:'Very High'|default:'' }}</td>
-                                </tr>
-                                <tr><th class="text-end pe-1">VL</th>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Very Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Low'|default:'' }}</td>
-                                    <td class="bg-sustainable">{{ residual_matrix|get_item:'Very Low'|get_item:'Medium'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very Low'|get_item:'High'|default:'' }}</td>
-                                    <td class="bg-moderate">{{ residual_matrix|get_item:'Very Low'|get_item:'Very High'|default:'' }}</td>
+                                    <td class="bg-low">{{ residual_matrix|get_item:'Low'|get_item:'Low'|default:'' }}</td>
+                                    <td class="bg-low">{{ residual_matrix|get_item:'Low'|get_item:'Medium'|default:'' }}</td>
+                                    <td class="bg-medium">{{ residual_matrix|get_item:'Low'|get_item:'High'|default:'' }}</td>
                                 </tr>
                             </table>
                             <div class="x-axis-label">IMPACT</div>
@@ -1143,8 +1096,8 @@
                             <th>Department</th>
                             <th>Score</th>
                             <th>Total</th>
-                            <th>Critical</th>
-                            <th>Severe</th>
+                            <th>High</th>
+                            <th>Medium</th>
                             <th>Overdue</th>
                             <th>Open Actions</th>
                         </tr>
@@ -1160,8 +1113,8 @@
                             </td>
                             <td><span class="badge bg-dark">{{ dept.score }}</span></td>
                             <td>{{ dept.total }}</td>
-                            <td><span class="badge bg-danger">{{ dept.critical }}</span></td>
-                            <td><span class="badge bg-warning text-dark">{{ dept.severe }}</span></td>
+                            <td><span class="badge bg-danger">{{ dept.high }}</span></td>
+                            <td><span class="badge bg-warning text-dark">{{ dept.medium }}</span></td>
                             <td><span class="badge bg-danger">{{ dept.overdue }}</span></td>
                             <td>{{ dept.open_actions }}</td>
                         </tr>
@@ -1240,8 +1193,8 @@
             <span class="badge bg-danger">Weak</span>
         {% elif risk.control_effectiveness == "Strong" %}
             <span class="badge bg-success">Strong</span>
-        {% elif risk.control_effectiveness == "Moderate" %}
-            <span class="badge bg-warning text-dark">Moderate</span>
+        {% elif risk.control_effectiveness == "Medium" %}
+            <span class="badge bg-warning text-dark">Medium</span>
         {% else %}
             <span class="badge bg-secondary">Not Assessed</span>
         {% endif %}

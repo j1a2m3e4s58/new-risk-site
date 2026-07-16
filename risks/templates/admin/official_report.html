@@ -84,7 +84,7 @@
         /* ADMIN EDIT BOX */
         .admin-controls { background: rgba(79,140,255,.10); padding: 10px; border: 1px solid rgba(79,140,255,.36); margin-bottom: 15px; border-radius: 0; }
         textarea { width: 100%; height: 60px; padding: 5px; font-family: inherit; font-size: 12px; background: rgba(7,12,19,.54); color: var(--text); border: 1px solid var(--line); }
-        .summary-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 16px; }
         .summary-card { border: 1px solid var(--line); padding: 8px; background: rgba(255,255,255,.045); text-align: center; }
         .summary-card strong { display: block; font-size: 18px; margin-top: 3px; }
         .quality-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:8px; margin-bottom:16px; }
@@ -190,8 +190,9 @@
 
     <div class="summary-grid">
         <div class="summary-card">Total Risks<strong>{{ report_summary.total_risks }}</strong></div>
-        <div class="summary-card">Critical<strong>{{ report_summary.critical_risks }}</strong></div>
-        <div class="summary-card">Severe<strong>{{ report_summary.severe_risks }}</strong></div>
+        <div class="summary-card">High<strong>{{ report_summary.high_risks }}</strong></div>
+        <div class="summary-card">Medium<strong>{{ report_summary.medium_risks }}</strong></div>
+        <div class="summary-card">Low<strong>{{ report_summary.low_risks }}</strong></div>
         <div class="summary-card">Overdue<strong>{{ report_summary.overdue_actions }}</strong></div>
         <div class="summary-card">Escalated<strong>{{ report_summary.escalated_risks }}</strong></div>
         <div class="summary-card">Open Incidents<strong>{{ report_summary.open_incident_count }}</strong></div>
@@ -213,20 +214,18 @@
                 <th class="col-likelihood">Likelihood</th>
                 <th class="col-impact">Impact</th>
                 <th class="col-rank">Risk Rank</th>
-                <th class="col-trigger">Risk Trigger (Root Cause)</th>
-                <th class="col-controls">Prevention Controls</th>
-                <th class="col-treatment">Action Plan</th>
+                <th class="col-trigger">Risk Trigger</th>
+                <th class="col-controls">Preventive Controls</th>
+                <th class="col-treatment">Risk Treatment</th>
                 <th class="col-owner">Risk Owner</th>
-                <th class="col-coordinator">Coordinator</th>
-                <th>Control Effectiveness</th>
-                <th>Escalation</th>
-                <th class="col-residual">Residual Risk</th>
+                <th class="col-coordinator">Risk Coordinator</th>
+                <th class="col-residual">Residual Risk( if any)</th>
             </tr>
         </thead>
         <tbody>
     {% for dept, dept_risks in grouped_risks.items %}
         <tr>
-            <td colspan="14" style="font-weight:bold; background:#000; color:#fff; padding:8px;">
+            <td colspan="12" style="font-weight:bold; background:#000; color:#fff; padding:8px;">
                 {{ dept }}
             </td>
         </tr>
@@ -239,26 +238,18 @@
 
             <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability|level_label }}</td>
             <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact|level_label }}</td>
-            <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating }}</td>
+            <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating|level_label }}</td>
             <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
 
             <td>{{ risk.control_description|default:"Standard Controls" }}</td>
-            <td>
-                {{ risk.mitigation_action|default:"Mitigate and monitor" }}<br>
-                <small>Status: {{ risk.action_status }} | Progress: {{ risk.action_progress }}% | Due: {{ risk.action_due_date|default:"-" }}</small>
-            </td>
+            <td>{{ risk.mitigation_action|default:"mitigate" }}</td>
             <td>{{ risk.risk_owner }}</td>
-            <td>{{ risk.risk_coordinator_name|default:"-" }}</td>
-            <td>{{ risk.control_effectiveness }}</td>
-            <td>{{ risk.escalation_status }}</td>
-
-
-
-            <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
+            <td>{{ risk.risk_coordinator_name|default:"Risk & compliance officer" }}</td>
+            <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating|level_label }}</td>
         </tr>
         {% endfor %}
     {% empty %}
-        <tr><td colspan="14" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
+        <tr><td colspan="12" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
     {% endfor %}
 </tbody>
 

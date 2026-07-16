@@ -63,8 +63,34 @@ def log_system_event(request, action, summary, target=None, metadata=None, area_
     )
 
 
+RISK_LEVELS = ["High", "Medium", "Low"]
+HEATMAP_PROBABILITIES = ["High", "Medium", "Low"]
+HEATMAP_IMPACTS = ["Low", "Medium", "High"]
+
+
+def normalize_risk_level(value):
+    value = (value or "").strip()
+    if value in ["Very High", "High", "Critical"]:
+        return "High"
+    if value in ["Medium", "Moderate", "Severe"]:
+        return "Medium"
+    return "Low"
+
+
 def display_level(value):
-    return "Moderate" if value == "Medium" else value
+    return normalize_risk_level(value)
+
+
+def risk_rank_value(value):
+    return {"High": 3, "Medium": 2, "Low": 1}.get(normalize_risk_level(value), 1)
+
+
+def is_high_risk(value):
+    return normalize_risk_level(value) == "High"
+
+
+def is_medium_or_high_risk(value):
+    return normalize_risk_level(value) in ["Medium", "High"]
 
 
 def _in_group(user, *group_names):
@@ -92,8 +118,8 @@ def can_view_reports(user):
 
 def _department_score(area_name, risks):
     risk_list = list(risks)
-    critical = sum(1 for risk in risk_list if risk.residual_rating == "Critical")
-    severe = sum(1 for risk in risk_list if risk.residual_rating == "Severe")
+    high = sum(1 for risk in risk_list if is_high_risk(risk.residual_rating))
+    medium = sum(1 for risk in risk_list if normalize_risk_level(risk.residual_rating) == "Medium")
     overdue = sum(1 for risk in risk_list if risk.is_action_overdue)
     escalated = sum(1 for risk in risk_list if risk.escalation_status != "Normal")
     open_actions_count = sum(
@@ -102,10 +128,10 @@ def _department_score(area_name, risks):
     )
     return {
         "area": area_name,
-        "score": (critical * 20) + (severe * 12) + (overdue * 10) + (escalated * 10) + (open_actions_count * 3) + len(risk_list),
+        "score": (high * 20) + (medium * 10) + (overdue * 10) + (escalated * 10) + (open_actions_count * 3) + len(risk_list),
         "total": len(risk_list),
-        "critical": critical,
-        "severe": severe,
+        "high": high,
+        "medium": medium,
         "overdue": overdue,
         "escalated": escalated,
         "open_actions": open_actions_count,
@@ -115,7 +141,7 @@ def _department_score(area_name, risks):
 def _rating_chart(risks):
     risk_list = list(risks)
     rows = []
-    for rating in ["Critical", "Severe", "Moderate", "Sustainable"]:
+    for rating in RISK_LEVELS:
         count = sum(1 for risk in risk_list if risk.residual_rating == rating)
         rows.append({
             "label": rating,
@@ -171,12 +197,12 @@ def _build_assurance_cockpit(risks, incidents, departments):
     missing_controls = sum(1 for risk in risk_list if not (risk.controls or "").strip())
     missing_actions = sum(
         1 for risk in risk_list
-        if risk.residual_rating in ["Critical", "Severe"] and not (risk.mitigation_action or "").strip()
+        if is_medium_or_high_risk(risk.residual_rating) and not (risk.mitigation_action or "").strip()
     )
     stale_reviews = sum(1 for risk in risk_list if risk.updated_at.date() < today - timedelta(days=90))
     overdue = sum(1 for risk in risk_list if risk.is_action_overdue)
     weak_controls = sum(1 for risk in risk_list if risk.control_effectiveness == "Weak")
-    critical = sum(1 for risk in risk_list if risk.residual_rating == "Critical")
+    high = sum(1 for risk in risk_list if is_high_risk(risk.residual_rating))
     board_items = sum(1 for risk in risk_list if risk.escalation_status == "Board Attention")
     open_incidents = sum(1 for incident in incident_list if incident.status not in ["Resolved", "Closed"])
     pending_approvals = sum(1 for risk in risk_list if risk.workflow_status in ["Draft", "Reviewed"])
@@ -190,11 +216,11 @@ def _build_assurance_cockpit(risks, incidents, departments):
 
     quality_penalty = missing_owner + missing_controls + missing_actions + stale_reviews
     quality_score = max(0, round(100 - ((quality_penalty / max(total * 4, 1)) * 100)))
-    appetite_status = "Breach" if critical or board_items else "Within appetite"
+    appetite_status = "Breach" if high or board_items else "Within appetite"
     assurance_items = [
         {"label": "Data quality", "value": f"{quality_score}%", "tone": "good" if quality_score >= 75 else "warn"},
         {"label": "Appetite status", "value": appetite_status, "tone": "bad" if appetite_status == "Breach" else "good"},
-        {"label": "Critical exposure", "value": critical, "tone": "bad" if critical else "good"},
+        {"label": "High exposure", "value": high, "tone": "bad" if high else "good"},
         {"label": "Board attention", "value": board_items, "tone": "bad" if board_items else "good"},
         {"label": "Overdue actions", "value": overdue, "tone": "bad" if overdue else "good"},
         {"label": "Due in 30 days", "value": due_soon, "tone": "warn" if due_soon else "good"},
@@ -244,7 +270,7 @@ def suggest_risk_owner(area_name):
 def score_probability_from_occurrence(occurrence_value):
     """
     occurrence_value can be '', '0', ' 200', '10', etc.
-    Returns one of: Very Low, Low, Medium, High, Very High
+    Returns one of: Low, Medium, High
     """
     try:
         n = int(str(occurrence_value).strip())
@@ -252,20 +278,18 @@ def score_probability_from_occurrence(occurrence_value):
         n = 0
 
     if n <= 0:
-        return "Very Low"
+        return "Low"
     if n <= 2:
         return "Low"
     if n <= 5:
         return "Medium"
-    if n <= 20:
-        return "High"
-    return "Very High"
+    return "High"
 
 
 def score_impact_from_text(related_risk_text):
     """
     Keyword-based impact scoring from Related Risk / Description text.
-    Returns: Very Low/Low/Medium/High/Very High (we mostly use Medium+)
+    Returns: Low/Medium/High
     """
     t = (related_risk_text or "").lower()
 
@@ -281,7 +305,7 @@ def score_impact_from_text(related_risk_text):
 
     for k in very_high_keys:
         if k in t:
-            return "Very High"
+            return "High"
 
     for k in high_keys:
         if k in t:
@@ -339,10 +363,10 @@ def _profile_rating_from_average(average_score):
 
 def _profile_levels_from_rating(profile_rating):
     if profile_rating == "High":
-        return "High", "Very High"
+        return "High", "High"
     if profile_rating == "Medium":
         return "Medium", "High"
-    return "Low", "Medium"
+    return "Low", "Low"
 
 
 def _edd_recommendation(profile_rating, high_factors):
@@ -354,7 +378,7 @@ def _edd_recommendation(profile_rating, high_factors):
         )
     if high_factors:
         return (
-            "Moderate monitoring required: review the high-weight determinants, confirm KYC completeness, "
+            "Medium monitoring required: review the high-weight determinants, confirm KYC completeness, "
             "validate expected transaction behavior, and document management review."
         )
     return "Standard customer due diligence and periodic monitoring are appropriate based on the current profile."
@@ -364,7 +388,7 @@ def _profile_confidence_notes(source_type, determinant_rows, average_score, prof
     source_label = source_type or "pasted text"
     return (
         f"Source: {source_label}. Detected {len(determinant_rows)} determinant(s). "
-        f"Applied template scale Low <= 1.20, Moderate 1.21-2.00, High 2.01-3.00. "
+        f"Applied template scale Low <= 1.20, Medium 1.21-2.00, High 2.01-3.00. "
         f"Average score {average_score} produced {profile_rating} profile rating."
     )
 
@@ -373,13 +397,13 @@ def _review_plan_for_rating(profile_rating):
     rating = (profile_rating or "").lower()
     if rating == "high":
         return "Quarterly / enhanced due diligence", timezone.localdate() + timedelta(days=90)
-    if rating in ["moderate", "medium"]:
+    if rating == "medium":
         return "Six-month review", timezone.localdate() + timedelta(days=180)
     return "Annual review", timezone.localdate() + timedelta(days=365)
 
 
 def _profile_rank(profile_rating):
-    return {"Low": 1, "Moderate": 2, "Medium": 2, "High": 3}.get(profile_rating or "", 0)
+    return {"Low": 1, "Medium": 2, "High": 3}.get(normalize_risk_level(profile_rating), 0)
 
 
 def _previous_customer_profile(account_no="", account_name=""):
@@ -559,11 +583,11 @@ def _parse_customer_risk_profile(raw_text, source_type="", source_filename=""):
     account_label = account_name or account_no or "Customer"
     high_factor_text = "; ".join(f"{row['category']}: {row['variable']}" for row in high_factors[:6]) or "No high-weight determinant identified."
     recommendation = _edd_recommendation(profile_rating, high_factors)
-    confidence_notes = _profile_confidence_notes(source_type, determinant_rows, average_score, "Moderate" if profile_rating == "Medium" else profile_rating)
+    confidence_notes = _profile_confidence_notes(source_type, determinant_rows, average_score, profile_rating)
 
     base_ref = f"CRP-{_clean_ref_part(account_label)}"
     reference_id = make_unique_reference_id(base_ref)
-    rating_label = "Moderate" if profile_rating == "Medium" else profile_rating
+    rating_label = profile_rating
 
     return {
         "reference_id": reference_id,
@@ -581,7 +605,7 @@ def _parse_customer_risk_profile(raw_text, source_type="", source_filename=""):
         "control_descriptions": "Customer due diligence, beneficial ownership verification, watchlist screening, transaction monitoring, enhanced due diligence where required, periodic review.",
         "control_owner": "Compliance Officer",
         "residual_probability": probability,
-        "residual_impact": "High" if impact == "Very High" else impact,
+        "residual_impact": normalize_risk_level(impact),
         "residual_rating": "-",
         "source_kri": "Customer Risk Profile",
         "source_kri_description": high_factor_text,
@@ -621,15 +645,15 @@ def _likelihood_from_occurrence(value):
         except ValueError:
             pct = 0.0
         if pct <= 0:
-            return "Very Low"
+            return "Low"
         if pct < 5:
             return "Medium"
         if pct < 10:
             return "High"
-        return "Very High"
+        return "High"
 
     if any(x in v for x in ["daily", "per day", "every day", "frequent", "often", "always"]):
-        return "Very High"
+        return "High"
     if any(x in v for x in ["weekly", "per week"]):
         return "High"
     if any(x in v for x in ["monthly", "per month"]):
@@ -643,14 +667,14 @@ def _likelihood_from_occurrence(value):
         return "Medium"
 
     if n <= 0:
-        return "Very Low"
+        return "Low"
     if n == 1:
         return "Low"
     if 2 <= n <= 3:
         return "Medium"
     if 4 <= n <= 9:
         return "High"
-    return "Very High"
+    return "High"
 
 
 def _impact_from_profile_text(text):
@@ -671,7 +695,7 @@ def _impact_from_profile_text(text):
         "reporting", "review", "overdue", "complaint",
     ]
     if any(k in t for k in very_high):
-        return "Very High"
+        return "High"
     if any(k in t for k in high):
         return "High"
     if any(k in t for k in medium):
@@ -680,7 +704,7 @@ def _impact_from_profile_text(text):
 
 
 def _reduce_level(level):
-    order = ["Very Low", "Low", "Medium", "High", "Very High"]
+    order = ["Low", "Medium", "High"]
     if level not in order:
         level = "Medium"
     return order[max(order.index(level) - 1, 0)]
@@ -744,7 +768,7 @@ def _extract_risk_records_from_text(raw_text, skip_zero_occurrence=False, source
         prob = _likelihood_from_occurrence(occurrence)
         impact = _impact_from_profile_text(combined)
         residual_prob = _reduce_level(prob) if not is_zero_occurrence(occurrence) else prob
-        residual_impact = _reduce_level(impact) if impact in ["High", "Very High"] else impact
+        residual_impact = _reduce_level(impact) if impact == "High" else impact
 
         extracted.append({
             "reference_id": reference_id,
@@ -888,8 +912,8 @@ def dashboard(request):
 
     risks = _apply_dashboard_filters(request, risks)
 
-    probabilities = ['Very High', 'High', 'Medium', 'Low', 'Very Low']
-    impacts = ['Very Low', 'Low', 'Medium', 'High', 'Very High']
+    probabilities = HEATMAP_PROBABILITIES
+    impacts = HEATMAP_IMPACTS
 
     def get_matrix_counts(risk_type):
         matrix_grid = {p: {i: 0 for i in impacts} for p in probabilities}
@@ -915,21 +939,21 @@ def dashboard(request):
         for area in departments:
             area_risks = list(RiskAssessment.objects.filter(area_name=area))
             total = len(area_risks)
-            critical = sum(1 for risk in area_risks if risk.residual_rating == "Critical")
-            severe = sum(1 for risk in area_risks if risk.residual_rating == "Severe")
+            high = sum(1 for risk in area_risks if is_high_risk(risk.residual_rating))
+            medium = sum(1 for risk in area_risks if normalize_risk_level(risk.residual_rating) == "Medium")
             overdue = sum(1 for risk in area_risks if risk.is_action_overdue)
             open_actions_count = sum(
                 1 for risk in area_risks
                 if risk.mitigation_action and risk.action_status != "Completed"
             )
-            score = (critical * 20) + (severe * 12) + (overdue * 10) + (open_actions_count * 3) + total
+            score = (high * 20) + (medium * 10) + (overdue * 10) + (open_actions_count * 3) + total
 
             scored_departments.append({
                 "area": area,
                 "score": score,
                 "total": total,
-                "critical": critical,
-                "severe": severe,
+                "high": high,
+                "medium": medium,
                 "overdue": overdue,
                 "open_actions": open_actions_count,
             })
@@ -942,7 +966,7 @@ def dashboard(request):
         incident_qs = incident_qs.filter(area_name=selected_area)
     total_loss_amount = sum(incident.loss_amount for incident in incident_qs)
     early_warnings = {
-        "critical": [risk for risk in visible_risk_list if risk.residual_rating == "Critical"][:10],
+        "high": [risk for risk in visible_risk_list if is_high_risk(risk.residual_rating)][:10],
         "overdue": [risk for risk in visible_risk_list if risk.is_action_overdue][:10],
         "worsening": [risk for risk in visible_risk_list if risk.residual_trend_label == "Worsening"][:10],
         "missing_owner": [
@@ -951,7 +975,7 @@ def dashboard(request):
         ][:10],
         "missing_action": [
             risk for risk in visible_risk_list
-            if risk.residual_rating in ["Critical", "Severe"] and not (risk.mitigation_action or "").strip()
+            if is_medium_or_high_risk(risk.residual_rating) and not (risk.mitigation_action or "").strip()
         ][:10],
         "weak_controls": [
             risk for risk in visible_risk_list
@@ -965,8 +989,8 @@ def dashboard(request):
     notifications = []
     for risk in early_warnings["overdue"][:5]:
         notifications.append({"level": "warning", "title": f"{risk.reference_id} overdue", "body": f"{risk.days_overdue} day(s) overdue"})
-    for risk in early_warnings["critical"][:5]:
-        notifications.append({"level": "danger", "title": f"{risk.reference_id} critical", "body": risk.area_name or "Unspecified"})
+    for risk in early_warnings["high"][:5]:
+        notifications.append({"level": "danger", "title": f"{risk.reference_id} high risk", "body": risk.area_name or "Unspecified"})
     for incident in incident_qs.exclude(status__in=["Resolved", "Closed"])[:5]:
         notifications.append({"level": "info", "title": f"Incident: {incident.title}", "body": incident.area_name or "Unspecified"})
     for risk in risks.filter(workflow_status__in=["Draft", "Reviewed"])[:5]:
@@ -988,7 +1012,7 @@ def dashboard(request):
     context = {
         'risks': risks,
         'total_risks': risks.count(),
-        'critical_risks': risks.filter(residual_rating='Critical').count(),
+        'high_risks': sum(1 for risk in risks if is_high_risk(risk.residual_rating)),
         'overdue_actions': sum(1 for risk in risks if risk.is_action_overdue),
         'escalated_risks': sum(1 for risk in risks if risk.escalation_status != "Normal"),
         'open_actions': risks.exclude(action_status='Completed').exclude(mitigation_action__exact='').count(),
@@ -1036,7 +1060,7 @@ def compliance_assistant(request):
     suggested_questions = [
         "Explain the highest risks and why management should care.",
         "Which risks need urgent attention today?",
-        "Use internet context to suggest controls for the critical risks.",
+        "Use internet context to suggest controls for the high risks.",
         "Compare our risk exposure with common banking risk practices.",
     ]
     question = ""
@@ -1235,12 +1259,12 @@ def department_detail(request, area_name):
     risk_list = list(risks)
     board_summary = (
         f"{area_name} has {len(risk_list)} recorded risk item(s), "
-        f"{sum(1 for risk in risk_list if risk.residual_rating == 'Critical')} critical residual risk(s), "
+        f"{sum(1 for risk in risk_list if is_high_risk(risk.residual_rating))} high residual risk(s), "
         f"{sum(1 for risk in risk_list if risk.is_action_overdue)} overdue action(s), and "
         f"{incidents.exclude(status__in=['Resolved', 'Closed']).count()} open incident(s)."
     )
-    probabilities = ['Very High', 'High', 'Medium', 'Low', 'Very Low']
-    impacts = ['Very Low', 'Low', 'Medium', 'High', 'Very High']
+    probabilities = HEATMAP_PROBABILITIES
+    impacts = HEATMAP_IMPACTS
     matrix = {p: {i: 0 for i in impacts} for p in probabilities}
     for risk in risk_list:
         if risk.residual_probability in matrix and risk.residual_impact in matrix[risk.residual_probability]:
@@ -1290,7 +1314,7 @@ def notifications_panel(request):
     incidents = RiskIncident.objects.exclude(status__in=["Resolved", "Closed"])[:20]
     notifications = {
         "overdue": [risk for risk in risks if risk.is_action_overdue],
-        "critical": [risk for risk in risks if risk.residual_rating == "Critical"],
+        "high": [risk for risk in risks if is_high_risk(risk.residual_rating)],
         "incidents": incidents,
         "pending": [risk for risk in risks if risk.workflow_status in ["Draft", "Reviewed"]],
     }
@@ -1375,22 +1399,22 @@ def export_risks_csv(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="risk_register.csv"'
     writer = csv.writer(response)
-    writer.writerow(['ID', 'Area', 'Description', 'Root Cause', 'Consequences', 'Risk Owner', 'Inherent Probability', 'Inherent Impact', 'Inherent Rating', 'Residual Probability', 'Residual Impact', 'Residual Rating'])
+    writer.writerow(['ID', 'Risk Category', 'Risk Description', 'Likelihood', 'Impact', 'Risk Rank', 'Risk Trigger', 'Preventive Controls', 'Risk Treatment', 'Risk Owner', 'Risk Coordinator', 'Residual Risk'])
 
     for risk in export_qs:
         writer.writerow([
             risk.reference_id,
             risk.area_name,
             risk.description,
-            risk.caused_by,
-            risk.consequences,
-            risk.risk_owner,
             display_level(risk.inherent_probability),
             display_level(risk.inherent_impact),
-            risk.inherent_rating,
-            display_level(risk.residual_probability),
-            display_level(risk.residual_impact),
-            risk.residual_rating
+            display_level(risk.inherent_rating),
+            risk.caused_by,
+            risk.control_description,
+            risk.mitigation_action or "mitigate",
+            risk.risk_owner,
+            risk.risk_coordinator_name or "Risk & Compliance Officer",
+            display_level(risk.residual_rating)
         ])
     return response
 
@@ -1399,7 +1423,7 @@ def export_risks_csv(request):
 def executive_dashboard(request):
     risks = list(RiskAssessment.objects.all().order_by("area_name", "reference_id"))
     incidents = list(RiskIncident.objects.all())
-    ratings = ["Critical", "Severe", "Moderate", "Sustainable"]
+    ratings = RISK_LEVELS
 
     rating_counts = {
         rating: sum(1 for risk in risks if risk.residual_rating == rating)
@@ -1410,17 +1434,17 @@ def executive_dashboard(request):
     departments = sorted({risk.area_name or "Unspecified" for risk in risks})
     for area in departments:
         area_risks = [risk for risk in risks if (risk.area_name or "Unspecified") == area]
-        critical = sum(1 for risk in area_risks if risk.residual_rating == "Critical")
-        severe = sum(1 for risk in area_risks if risk.residual_rating == "Severe")
+        high = sum(1 for risk in area_risks if is_high_risk(risk.residual_rating))
+        medium = sum(1 for risk in area_risks if normalize_risk_level(risk.residual_rating) == "Medium")
         overdue = sum(1 for risk in area_risks if risk.is_action_overdue)
         escalated = sum(1 for risk in area_risks if risk.escalation_status != "Normal")
-        score = (critical * 20) + (severe * 12) + (overdue * 10) + (escalated * 10) + len(area_risks)
+        score = (high * 20) + (medium * 10) + (overdue * 10) + (escalated * 10) + len(area_risks)
         department_rows.append({
             "area": area,
             "score": score,
             "total": len(area_risks),
-            "critical": critical,
-            "severe": severe,
+            "high": high,
+            "medium": medium,
             "overdue": overdue,
             "escalated": escalated,
         })
@@ -1434,7 +1458,7 @@ def executive_dashboard(request):
         "top_risks": sorted(
             risks,
             key=lambda risk: (
-                {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(risk.residual_rating, 9),
+                {"High": 0, "Medium": 1, "Low": 2}.get(normalize_risk_level(risk.residual_rating), 9),
                 risk.reference_id,
             ),
         )[:10],
@@ -1485,7 +1509,7 @@ def official_report(request):
             "label": "No action plan",
             "count": sum(
                 1 for risk in visible_risks
-                if risk.residual_rating in ["Critical", "Severe"] and not (risk.mitigation_action or "").strip()
+                if is_medium_or_high_risk(risk.residual_rating) and not (risk.mitigation_action or "").strip()
             ),
         },
         {
@@ -1508,8 +1532,9 @@ def official_report(request):
         'report_quality_warnings': report_quality_warnings,
         'report_summary': {
             'total_risks': risks.count(),
-            'critical_risks': risks.filter(residual_rating='Critical').count(),
-            'severe_risks': risks.filter(residual_rating='Severe').count(),
+            'high_risks': sum(1 for risk in risks if is_high_risk(risk.residual_rating)),
+            'medium_risks': sum(1 for risk in risks if normalize_risk_level(risk.residual_rating) == 'Medium'),
+            'low_risks': sum(1 for risk in risks if normalize_risk_level(risk.residual_rating) == 'Low'),
             'overdue_actions': sum(1 for risk in risks if risk.is_action_overdue),
             'escalated_risks': sum(1 for risk in risks if risk.escalation_status != 'Normal'),
             'incident_count': incidents.count(),
@@ -1683,16 +1708,16 @@ def ai_extract_save_and_approve(request):
             except ValueError:
                 pct = 0.0
             if pct <= 0:
-                return "Very Low"
+                return "Low"
             if pct < 5:
                 return "Medium"
             if pct < 10:
                 return "High"
-            return "Very High"
+            return "High"
 
         # frequency phrases
         if any(x in v for x in ["daily", "per day", "every day"]):
-            return "Very High"
+            return "High"
         if any(x in v for x in ["weekly", "per week", "frequently", "often"]):
             return "High"
         if any(x in v for x in ["monthly", "per month"]):
@@ -1710,14 +1735,14 @@ def ai_extract_save_and_approve(request):
             return "Medium"
 
         if n <= 0:
-            return "Very Low"
+            return "Low"
         if n == 1:
             return "Low"
         if 2 <= n <= 3:
             return "Medium"
         if 4 <= n <= 9:
             return "High"
-        return "Very High"
+        return "High"
 
     def impact_from_text(text):
         t = (text or "").lower()
@@ -1737,7 +1762,7 @@ def ai_extract_save_and_approve(request):
         ]
 
         if any(k in t for k in very_high):
-            return "Very High"
+            return "High"
         if any(k in t for k in high):
             return "High"
         if any(k in t for k in medium):
@@ -1748,7 +1773,7 @@ def ai_extract_save_and_approve(request):
         return "Medium"
 
     def reduce_level(level):
-        order = ["Very Low", "Low", "Medium", "High", "Very High"]
+        order = ["Low", "Medium", "High"]
         if level not in order:
             level = "Medium"
         return order[max(order.index(level) - 1, 0)]
@@ -1999,15 +2024,15 @@ def export_risks_csv_and_clear(request):
             risk.reference_id,
             risk.area_name,
             risk.description,
-            risk.caused_by,
-            risk.consequences,
-            risk.risk_owner,
             display_level(risk.inherent_probability),
             display_level(risk.inherent_impact),
-            risk.inherent_rating,
-            display_level(risk.residual_probability),
-            display_level(risk.residual_impact),
-            risk.residual_rating
+            display_level(risk.inherent_rating),
+            risk.caused_by,
+            risk.control_description,
+            risk.mitigation_action or "mitigate",
+            risk.risk_owner,
+            risk.risk_coordinator_name or "Risk & Compliance Officer",
+            display_level(risk.residual_rating)
         ])
 
     return response
@@ -2080,10 +2105,9 @@ def clear_all_risks(request):
 # ========= BOARD_EXPLANATION_START =========
 def _rating_counts(qs, field_name):
     counts = {
-        "Critical": 0,
-        "Severe": 0,
-        "Moderate": 0,
-        "Sustainable": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
     }
     for item in qs:
         value = getattr(item, field_name, "") or ""
@@ -2142,8 +2166,8 @@ def _sample_risks(risks, limit=5):
     ranked = sorted(
         risks,
         key=lambda r: (
-            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.residual_rating, 9),
-            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.inherent_rating, 9),
+            {"High": 0, "Medium": 1, "Low": 2}.get(normalize_risk_level(r.residual_rating), 9),
+            {"High": 0, "Medium": 1, "Low": 2}.get(normalize_risk_level(r.inherent_rating), 9),
             r.reference_id
         )
     )
@@ -2168,8 +2192,8 @@ def _build_board_narrative(area_name, risks):
             ),
             "top_themes": [],
             "sample_risks": [],
-            "inherent_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
-            "residual_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "inherent_counts": {"High": 0, "Medium": 0, "Low": 0},
+            "residual_counts": {"High": 0, "Medium": 0, "Low": 0},
             "improvement_count": 0,
             "unchanged_count": 0,
             "worsened_count": 0,
@@ -2178,7 +2202,7 @@ def _build_board_narrative(area_name, risks):
     inherent_counts = _rating_counts(risks, "inherent_rating")
     residual_counts = _rating_counts(risks, "residual_rating")
 
-    scale = {"Sustainable": 1, "Moderate": 2, "Severe": 3, "Critical": 4}
+    scale = {"Low": 1, "Medium": 2, "High": 3}
     improvement_count = 0
     unchanged_count = 0
     worsened_count = 0
@@ -2193,15 +2217,15 @@ def _build_board_narrative(area_name, risks):
         else:
             worsened_count += 1
 
-    inherent_high = inherent_counts["Critical"] + inherent_counts["Severe"]
-    residual_high = residual_counts["Critical"] + residual_counts["Severe"]
+    inherent_high = inherent_counts["High"]
+    residual_high = residual_counts["High"]
 
     area_label = area_name or "Selected Department"
 
     if inherent_high >= max(1, round(total * 0.5)):
         inherent_tone = (
             "The inherent risk profile is elevated, with a significant share of exposures falling within the "
-            "Critical and Severe bands before controls are applied."
+            "High band before controls are applied."
         )
     elif inherent_high > 0:
         inherent_tone = (
@@ -2211,13 +2235,13 @@ def _build_board_narrative(area_name, risks):
     else:
         inherent_tone = (
             "The inherent risk profile is comparatively contained, with exposures concentrated mainly in the "
-            "Moderate and Sustainable bands before controls are applied."
+            "Medium and Low bands before controls are applied."
         )
 
     if residual_high == 0:
         residual_tone = (
             "After controls, the residual risk profile appears well contained, with no remaining exposures in the "
-            "Critical or Severe bands."
+            "High band."
         )
     elif residual_high < inherent_high:
         residual_tone = (
@@ -2246,14 +2270,14 @@ def _build_board_narrative(area_name, risks):
             "and further strengthening may be required."
         )
 
-    if residual_counts["Critical"] > 0:
+    if residual_counts["High"] > 0:
         recommendation = (
-            "Board attention is recommended for the remaining Critical residual exposures. Management should present "
+            "Board attention is recommended for the remaining High residual exposures. Management should present "
             "targeted remediation actions, named accountabilities, and implementation timelines for those items."
         )
-    elif residual_counts["Severe"] > 0:
+    elif residual_counts["Medium"] > 0:
         recommendation = (
-            "The board may note that while controls are reducing exposure, some Severe residual risks remain. "
+            "The board may note that while controls are reducing exposure, some Medium residual risks remain. "
             "Management should continue focused monitoring and strengthen controls in the affected areas."
         )
     else:
@@ -2264,11 +2288,9 @@ def _build_board_narrative(area_name, risks):
 
     executive_summary = (
         f"The risk assessment for {area_label} covers {total} identified risk item"
-        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['Critical']} risk(s) were rated Critical, "
-        f"{inherent_counts['Severe']} Severe, {inherent_counts['Moderate']} Moderate, and "
-        f"{inherent_counts['Sustainable']} Sustainable. After accounting for controls, the profile moved to "
-        f"{residual_counts['Critical']} Critical, {residual_counts['Severe']} Severe, "
-        f"{residual_counts['Moderate']} Moderate, and {residual_counts['Sustainable']} Sustainable. "
+        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['High']} risk(s) were rated High, "
+        f"{inherent_counts['Medium']} Medium, and {inherent_counts['Low']} Low. After accounting for controls, the profile moved to "
+        f"{residual_counts['High']} High, {residual_counts['Medium']} Medium, and {residual_counts['Low']} Low. "
         f"This indicates that {improvement_count} risk(s) improved, {unchanged_count} remained unchanged, "
         f"and {worsened_count} worsened between the inherent and residual positions."
     )
@@ -2346,10 +2368,9 @@ def board_explanation(request):
 # ========= BOARD_EXPLANATION_START =========
 def _rating_counts(qs, field_name):
     counts = {
-        "Critical": 0,
-        "Severe": 0,
-        "Moderate": 0,
-        "Sustainable": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
     }
     for item in qs:
         value = getattr(item, field_name, "") or ""
@@ -2408,8 +2429,8 @@ def _sample_risks(risks, limit=5):
     ranked = sorted(
         risks,
         key=lambda r: (
-            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.residual_rating, 9),
-            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.inherent_rating, 9),
+            {"High": 0, "Medium": 1, "Low": 2}.get(normalize_risk_level(r.residual_rating), 9),
+            {"High": 0, "Medium": 1, "Low": 2}.get(normalize_risk_level(r.inherent_rating), 9),
             r.reference_id
         )
     )
@@ -2434,8 +2455,8 @@ def _build_board_narrative(area_name, risks):
             ),
             "top_themes": [],
             "sample_risks": [],
-            "inherent_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
-            "residual_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "inherent_counts": {"High": 0, "Medium": 0, "Low": 0},
+            "residual_counts": {"High": 0, "Medium": 0, "Low": 0},
             "improvement_count": 0,
             "unchanged_count": 0,
             "worsened_count": 0,
@@ -2444,7 +2465,7 @@ def _build_board_narrative(area_name, risks):
     inherent_counts = _rating_counts(risks, "inherent_rating")
     residual_counts = _rating_counts(risks, "residual_rating")
 
-    scale = {"Sustainable": 1, "Moderate": 2, "Severe": 3, "Critical": 4}
+    scale = {"Low": 1, "Medium": 2, "High": 3}
     improvement_count = 0
     unchanged_count = 0
     worsened_count = 0
@@ -2459,15 +2480,15 @@ def _build_board_narrative(area_name, risks):
         else:
             worsened_count += 1
 
-    inherent_high = inherent_counts["Critical"] + inherent_counts["Severe"]
-    residual_high = residual_counts["Critical"] + residual_counts["Severe"]
+    inherent_high = inherent_counts["High"]
+    residual_high = residual_counts["High"]
 
     area_label = area_name or "Selected Department"
 
     if inherent_high >= max(1, round(total * 0.5)):
         inherent_tone = (
             "The inherent risk profile is elevated, with a significant share of exposures falling within the "
-            "Critical and Severe bands before controls are applied."
+            "High band before controls are applied."
         )
     elif inherent_high > 0:
         inherent_tone = (
@@ -2477,13 +2498,13 @@ def _build_board_narrative(area_name, risks):
     else:
         inherent_tone = (
             "The inherent risk profile is comparatively contained, with exposures concentrated mainly in the "
-            "Moderate and Sustainable bands before controls are applied."
+            "Medium and Low bands before controls are applied."
         )
 
     if residual_high == 0:
         residual_tone = (
             "After controls, the residual risk profile appears well contained, with no remaining exposures in the "
-            "Critical or Severe bands."
+            "High band."
         )
     elif residual_high < inherent_high:
         residual_tone = (
@@ -2512,14 +2533,14 @@ def _build_board_narrative(area_name, risks):
             "and further strengthening may be required."
         )
 
-    if residual_counts["Critical"] > 0:
+    if residual_counts["High"] > 0:
         recommendation = (
-            "Board attention is recommended for the remaining Critical residual exposures. Management should present "
+            "Board attention is recommended for the remaining High residual exposures. Management should present "
             "targeted remediation actions, named accountabilities, and implementation timelines for those items."
         )
-    elif residual_counts["Severe"] > 0:
+    elif residual_counts["Medium"] > 0:
         recommendation = (
-            "The board may note that while controls are reducing exposure, some Severe residual risks remain. "
+            "The board may note that while controls are reducing exposure, some Medium residual risks remain. "
             "Management should continue focused monitoring and strengthen controls in the affected areas."
         )
     else:
@@ -2530,11 +2551,9 @@ def _build_board_narrative(area_name, risks):
 
     executive_summary = (
         f"The risk assessment for {area_label} covers {total} identified risk item"
-        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['Critical']} risk(s) were rated Critical, "
-        f"{inherent_counts['Severe']} Severe, {inherent_counts['Moderate']} Moderate, and "
-        f"{inherent_counts['Sustainable']} Sustainable. After accounting for controls, the profile moved to "
-        f"{residual_counts['Critical']} Critical, {residual_counts['Severe']} Severe, "
-        f"{residual_counts['Moderate']} Moderate, and {residual_counts['Sustainable']} Sustainable. "
+        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['High']} risk(s) were rated High, "
+        f"{inherent_counts['Medium']} Medium, and {inherent_counts['Low']} Low. After accounting for controls, the profile moved to "
+        f"{residual_counts['High']} High, {residual_counts['Medium']} Medium, and {residual_counts['Low']} Low. "
         f"This indicates that {improvement_count} risk(s) improved, {unchanged_count} remained unchanged, "
         f"and {worsened_count} worsened between the inherent and residual positions."
     )

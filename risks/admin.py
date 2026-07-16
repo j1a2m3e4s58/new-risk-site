@@ -158,7 +158,7 @@ class RiskAssessmentAdmin(admin.ModelAdmin):
         ('Escalation', {
             'fields': ('escalation_status', 'escalation_reason', 'escalated_at'),
             'classes': ('collapse',),
-            'description': "Critical residual risks and long-overdue actions are escalated automatically.",
+            'description': "High residual risks and long-overdue actions are escalated automatically.",
         }),
         ('Residual Risk (After Controls)', {
             'fields': (('residual_probability', 'residual_impact', 'residual_rating'),),
@@ -219,10 +219,9 @@ class RiskAssessmentAdmin(admin.ModelAdmin):
     # ====== COLORED BADGES ======
     def color_badge(self, rating):
         colors = {
-            'Critical': '#d32f2f',
-            'Severe': '#f57c00',
-            'Moderate': '#fbc02d',
-            'Sustainable': '#388e3c',
+            'High': '#d32f2f',
+            'Medium': '#f57c00',
+            'Low': '#00b050',
         }
         color = colors.get(rating, '#777')
         return format_html(

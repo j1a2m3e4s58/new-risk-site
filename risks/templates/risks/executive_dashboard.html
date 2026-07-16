@@ -49,7 +49,7 @@
 <div class="container-fluid p-4">
     <div class="row g-3 mb-4">
         <div class="col-md-3"><div class="card p-3"><div class="text-muted">Total Risks</div><div class="metric">{{ total_risks }}</div></div></div>
-        <div class="col-md-3"><div class="card p-3"><div class="text-muted">Critical Residual</div><div class="metric text-danger">{{ rating_counts.Critical }}</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">High Residual</div><div class="metric text-danger">{{ rating_counts.High }}</div></div></div>
         <div class="col-md-3"><div class="card p-3"><div class="text-muted">Open Incidents</div><div class="metric text-danger">{{ open_incident_count }}</div></div></div>
         <div class="col-md-3"><div class="card p-3"><div class="text-muted">Total Loss</div><div class="metric">{{ total_loss_amount }}</div></div></div>
     </div>
@@ -65,7 +65,7 @@
                             <strong>{{ count }}</strong>
                         </div>
                         <div class="bar">
-                            <span class="{% if label == 'Critical' %}bg-danger{% elif label == 'Severe' %}bg-warning{% elif label == 'Moderate' %}bg-info{% else %}bg-success{% endif %}" style="width: {% widthratio count total_risks 100 %}%"></span>
+                            <span class="{% if label == 'High' %}bg-danger{% elif label == 'Medium' %}bg-warning{% else %}bg-success{% endif %}" style="width: {% widthratio count total_risks 100 %}%"></span>
                         </div>
                     </div>
                 {% endfor %}
@@ -78,7 +78,7 @@
                     <table class="table table-sm align-middle">
                         <thead>
                             <tr>
-                                <th>Department</th><th>Score</th><th>Total</th><th>Critical</th><th>Severe</th><th>Overdue</th><th>Escalated</th>
+                                <th>Department</th><th>Score</th><th>Total</th><th>High</th><th>Medium</th><th>Overdue</th><th>Escalated</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,8 +87,8 @@
                                 <td>{{ row.area }}</td>
                                 <td><span class="badge bg-dark">{{ row.score }}</span></td>
                                 <td>{{ row.total }}</td>
-                                <td>{{ row.critical }}</td>
-                                <td>{{ row.severe }}</td>
+                                <td>{{ row.high }}</td>
+                                <td>{{ row.medium }}</td>
                                 <td>{{ row.overdue }}</td>
                                 <td>{{ row.escalated }}</td>
                             </tr>

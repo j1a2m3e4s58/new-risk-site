@@ -7,26 +7,21 @@ from datetime import timedelta
 class RiskAssessment(models.Model):
     # --- DROPDOWN CHOICES ---
     PROBABILITY_CHOICES = [
-        ('Very High', 'Very High'),
         ('High', 'High'),
-        ('Medium', 'Moderate'),
+        ('Medium', 'Medium'),
         ('Low', 'Low'),
-        ('Very Low', 'Very Low'),
     ]
 
     IMPACT_CHOICES = [
-        ('Very High', 'Very High'),
         ('High', 'High'),
-        ('Medium', 'Moderate'),
+        ('Medium', 'Medium'),
         ('Low', 'Low'),
-        ('Very Low', 'Very Low'),
     ]
 
     RATING_CHOICES = [
-        ('Critical', 'Critical'),
-        ('Severe', 'Severe'),
-        ('Moderate', 'Moderate'),
-        ('Sustainable', 'Sustainable'),
+        ('High', 'High'),
+        ('Medium', 'Medium'),
+        ('Low', 'Low'),
     ]
 
     ACTION_STATUS_CHOICES = [
@@ -52,7 +47,7 @@ class RiskAssessment(models.Model):
     CONTROL_EFFECTIVENESS_CHOICES = [
         ('Not Assessed', 'Not Assessed'),
         ('Strong', 'Strong'),
-        ('Moderate', 'Moderate'),
+        ('Medium', 'Medium'),
         ('Weak', 'Weak'),
     ]
 
@@ -175,33 +170,30 @@ class RiskAssessment(models.Model):
         related_name='risks_updated'
     )
 
+    def normalize_level(self, value):
+        """Convert any old scale value into the bank's current Low/Medium/High scale."""
+        value = (value or "").strip()
+        if value in ["Very High", "High", "Critical"]:
+            return "High"
+        if value in ["Medium", "Moderate", "Severe"]:
+            return "Medium"
+        return "Low"
+
     def calculate_rating(self, prob, impact):
-        """Standard 5x5 Matrix Logic"""
-        # 1. Critical (Red)
-        if (prob == 'Very High' and impact in ['Very High', 'High', 'Medium']) or \
-           (prob == 'High' and impact in ['Very High', 'High']) or \
-           (prob == 'Medium' and impact == 'Very High'):
-            return 'Critical'
-
-        # 2. Severe (Orange)
-        if (prob == 'Very High' and impact == 'Low') or \
-           (prob == 'High' and impact == 'Medium') or \
-           (prob == 'Medium' and impact == 'High') or \
-           (prob == 'Low' and impact == 'Very High'):
-            return 'Severe'
-
-        # 3. Moderate (Yellow)
-        if (prob == 'Very High' and impact == 'Very Low') or \
-           (prob == 'High' and impact == 'Low') or \
-           (prob == 'Medium' and impact in ['Medium', 'Low']) or \
-           (prob == 'Low' and impact in ['High', 'Medium']) or \
-           (prob == 'Very Low' and impact in ['Very High', 'High']):
-            return 'Moderate'
-
-        # 4. Sustainable (Green)
-        return 'Sustainable'
+        """Bank 3x3 matrix: Low, Medium, High only."""
+        weights = {"Low": 1, "Medium": 2, "High": 3}
+        score = weights[self.normalize_level(prob)] * weights[self.normalize_level(impact)]
+        if score >= 9:
+            return "High"
+        if score >= 3:
+            return "Medium"
+        return "Low"
 
     def save(self, *args, **kwargs):
+        self.inherent_probability = self.normalize_level(self.inherent_probability)
+        self.inherent_impact = self.normalize_level(self.inherent_impact)
+        self.residual_probability = self.normalize_level(self.residual_probability)
+        self.residual_impact = self.normalize_level(self.residual_impact)
         self.inherent_rating = self.calculate_rating(self.inherent_probability, self.inherent_impact)
         self.residual_rating = self.calculate_rating(self.residual_probability, self.residual_impact)
         self.action_progress = max(0, min(int(self.action_progress or 0), 100))
@@ -228,7 +220,7 @@ class RiskAssessment(models.Model):
         if len(snapshots) < 2:
             return "New"
 
-        rank = {"Sustainable": 1, "Moderate": 2, "Severe": 3, "Critical": 4}
+        rank = {"Low": 1, "Medium": 2, "High": 3}
         current = rank.get(snapshots[0].residual_rating, 0)
         previous = rank.get(snapshots[1].residual_rating, 0)
 
@@ -248,9 +240,9 @@ class RiskAssessment(models.Model):
             self.escalated_at = None
             return
 
-        if self.residual_rating == 'Critical':
+        if self.residual_rating == 'High':
             self.escalation_status = 'Board Attention'
-            reason = "Critical residual risk requires board attention."
+            reason = "High residual risk requires board attention."
         elif self.action_due_date and self.action_due_date < timezone.localdate() - timedelta(days=7):
             self.escalation_status = 'Management Attention'
             reason = "Mitigation action is more than 7 days overdue."
